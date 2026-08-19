@@ -1,0 +1,36 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The Set Version build phase reads git history and tags.
+          fetch-depth: 0
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -project OpenHere.xcodeproj \
+            -target OpenHere \
+            -configuration Release \
+            SYMROOT="$PWD/build" \
+            build
+
+      - name: Verify architectures
+        run: |
+          lipo -archs "build/Release/OpenHere.app/Contents/MacOS/OpenHere"
+          lipo -archs "build/Release/OpenHere.app/Contents/MacOS/OpenHere" | grep -q arm64
+
+      - name: Zip app
+        run: ditto -c -k --keepParent "build/Release/OpenHere.app" OpenHere.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenHere
+          path: OpenHere.zip
