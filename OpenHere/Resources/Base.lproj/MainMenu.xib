@@ -36,13 +36,6 @@
                             <menuItem isSeparatorItem="YES" id="VOq-y0-SEH"/>
                             <menuItem title="Preferences…" keyEquivalent="," id="BOF-NM-1cW"/>
                             <menuItem isSeparatorItem="YES" id="wFC-TO-SCJ"/>
-                            <menuItem title="Check for Updates..." id="wO4-dr-H4E">
-                                <modifierMask key="keyEquivalentModifierMask"/>
-                                <connections>
-                                    <action selector="checkForUpdates:" target="6Be-35-5e6" id="1oc-uR-ubC"/>
-                                </connections>
-                            </menuItem>
-                            <menuItem isSeparatorItem="YES" id="EF1-Js-PgA"/>
                             <menuItem title="Services" id="NMo-om-nkz">
                                 <modifierMask key="keyEquivalentModifierMask"/>
                                 <menu key="submenu" title="Services" systemMenu="services" id="hz9-B4-Xy5"/>
@@ -743,7 +736,6 @@
             </view>
             <point key="canvasLocation" x="139" y="33"/>
         </window>
-        <customObject id="6Be-35-5e6" customClass="SUUpdater"/>
         <userDefaultsController representsSharedInstance="YES" id="ZEu-IV-4zz"/>
     </objects>
 </document>

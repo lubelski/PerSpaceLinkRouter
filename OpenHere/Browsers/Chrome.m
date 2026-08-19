@@ -76,11 +76,26 @@
 - (void)openURL:(NSString *)url {
     NSWorkspace* workspace = [NSWorkspace sharedWorkspace];
     NSURL* applicationURL = [workspace URLForApplicationWithBundleIdentifier:self.bundleIdentifier];
-    NSDictionary* options = @{NSWorkspaceLaunchConfigurationArguments: @[url]};
-    NSError* error;
-    if (![workspace launchApplicationAtURL:applicationURL options:0 configuration:options error:&error]) {
-        NSLog(@"Failed to launch Chrome: %@", error);
+    NSURL* urlToOpen = [NSURL URLWithString:url];
+    if (!applicationURL || !urlToOpen) {
+        NSLog(@"Failed to launch Chrome for URL: %@", url);
+        return;
     }
+
+    // The app terminates as soon as this method returns, so block until the
+    // asynchronous open request has been handed off to Launch Services.
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    NSWorkspaceOpenConfiguration* configuration = [NSWorkspaceOpenConfiguration configuration];
+    [workspace openURLs:@[urlToOpen]
+        withApplicationAtURL:applicationURL
+               configuration:configuration
+           completionHandler:^(NSRunningApplication* app, NSError* error) {
+        if (error) {
+            NSLog(@"Failed to launch Chrome: %@", error);
+        }
+        dispatch_semaphore_signal(semaphore);
+    }];
+    dispatch_semaphore_wait(semaphore, dispatch_time(DISPATCH_TIME_NOW, 10 * NSEC_PER_SEC));
 }
 
 @end
