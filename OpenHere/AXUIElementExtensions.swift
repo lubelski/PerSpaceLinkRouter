@@ -6,6 +6,7 @@
 //  Copyright © 2016 Marc Schwieterman. All rights reserved.
 //
 
+import ApplicationServices
 import Foundation
 
 extension AXUIElement {
