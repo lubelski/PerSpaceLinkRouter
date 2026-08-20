@@ -42,7 +42,7 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>OpenHere uses AppleEvents to open links in your web browser.</string>
+	<string>SpaceRouter uses AppleEvents to open links in your web browser.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2016 Marc Schwieterman. All rights reserved.</string>
 	<key>NSMainNibFile</key>
