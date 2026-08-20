@@ -18,7 +18,7 @@ struct BrowserDescription {
 class BrowserManager {
 
     lazy var browserDescriptions: [BrowserDescription] = {
-        return self.supportedBrowsers.keys.compactMap { bundleIdentifier -> BrowserDescription? in
+        return self.supportedBrowserOrder.compactMap { bundleIdentifier -> BrowserDescription? in
             guard let applicationURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleIdentifier) else {
                 return nil
             }
@@ -61,6 +61,10 @@ class BrowserManager {
         BBI.chrome: Chrome(bundleIdentifier: BBI.chrome)
     ]
 
+    // Display order for the browser popup. Dictionary key order is randomized
+    // per launch, so the popup must never be built from supportedBrowsers.keys.
+    private let supportedBrowserOrder = [BBI.safari, BBI.safariTechnologyPreview, BBI.chrome]
+
     private lazy var defaultBrowserBundleIdentifier: String = {
         let url = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "http:")!)!
         let bundle = Bundle(url: url)!
@@ -78,7 +82,7 @@ class BrowserManager {
     }
 
     func setTargetBrowser(index: Int) {
-        defaults.targetBrowserBundleIdentifier = Array(supportedBrowsers.keys)[index]
+        defaults.targetBrowserBundleIdentifier = browserDescriptions[index].bundleIdentifier
     }
 
     func openURL(url: String) {
