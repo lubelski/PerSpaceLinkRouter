@@ -340,6 +340,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SpaceRouter/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.lubelski.SpaceRouter\"'";
 				PRODUCT_BUNDLE_IDENTIFIER = com.lubelski.SpaceRouter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "SpaceRouter/SpaceRouter-Bridging-Header.h";
@@ -359,6 +360,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SpaceRouter/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				OTHER_CODE_SIGN_FLAGS = "--requirements '=designated => identifier \"com.lubelski.SpaceRouter\"'";
 				PRODUCT_BUNDLE_IDENTIFIER = com.lubelski.SpaceRouter;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "SpaceRouter/SpaceRouter-Bridging-Header.h";
