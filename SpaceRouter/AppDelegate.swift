@@ -53,7 +53,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "arrow.triangle.branch", accessibilityDescription: "SpaceRouter")
+        if let image = NSImage(systemSymbolName: "arrow.triangle.branch", accessibilityDescription: "SpaceRouter") {
+            item.button?.image = image
+        } else {
+            item.button?.title = "SR"
+        }
+        item.button?.toolTip = "SpaceRouter"
         let menu = NSMenu()
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettingsFromMenu(_:)), keyEquivalent: "")
         settingsItem.target = self

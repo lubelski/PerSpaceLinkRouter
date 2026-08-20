@@ -51,6 +51,9 @@ open in the current Space.
 forwards links to, or to toggle the Dock icon and start at login, click the
 menu bar icon and choose `Settings…`.
 
+If you lose track of the window and the menu bar icon, launch `SpaceRouter`
+again. Reopening a running instance always shows the settings window.
+
 ![Select Browser](/images/select-browser.png)
 
 If you decide `SpaceRouter` isn't for you, you can restore your preferred
