@@ -1,6 +1,6 @@
 # SpaceRouter
 
-`SpaceRouter` opens web links in the current Space. It requires macOS 12 or
+`SpaceRouter` opens web links in the current Space. It requires macOS 13 or
 later and builds natively for Apple Silicon.
 
 Do you use Spaces/Mission Control on your Mac?
@@ -38,14 +38,18 @@ survive rebuilds. See CLAUDE.md for the trade-off.
 
 * Open links in the current Space
 * Prevent window activation when opening several links in a row
+* Menu bar icon with access to settings
+* Optional hidden Dock icon
+* Optional start at login
 
 ## Usage
 
 You should now be able to open links as you do normally, and they should always
 open in the current Space.
 
-If you want to change which browser `SpaceRouter` forwards links to, launch
-`SpaceRouter` directly.
+`SpaceRouter` stays running as a menu bar agent. To change which browser it
+forwards links to, or to toggle the Dock icon and start at login, click the
+menu bar icon and choose `Settings…`.
 
 ![Select Browser](/images/select-browser.png)
 
