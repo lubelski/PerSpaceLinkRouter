@@ -41,6 +41,8 @@
 	<string>1</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>LSUIElement</key>
+	<true/>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>SpaceRouter uses AppleEvents to open links in your web browser.</string>
 	<key>NSHumanReadableCopyright</key>

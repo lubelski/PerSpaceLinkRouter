@@ -65,11 +65,13 @@ class BrowserManager {
     // per launch, so the popup must never be built from supportedBrowsers.keys.
     private let supportedBrowserOrder = [BBI.safari, BBI.safariTechnologyPreview, BBI.chrome]
 
-    private lazy var defaultBrowserBundleIdentifier: String = {
+    // Computed, not cached: the app is resident now, and the system default
+    // browser can change while it runs.
+    private var defaultBrowserBundleIdentifier: String {
         let url = NSWorkspace.shared.urlForApplication(toOpen: URL(string: "http:")!)!
         let bundle = Bundle(url: url)!
         return bundle.bundleIdentifier!
-    }()
+    }
 
     private let defaults = UserDefaults.standard
 

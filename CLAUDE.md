@@ -5,6 +5,12 @@ web links in a browser window in the current Space. Derived from OpenHere by
 Marc Schwieterman (GPL). `origin` is the private repo and `master` is the
 mainline.
 
+The app runs as a resident menu bar agent. `LSUIElement` is set in Info.plist,
+and the Dock icon is a runtime toggle via `NSApp.setActivationPolicy`. The
+settings window is built programmatically in AppDelegate; MainMenu.xib holds
+only the main menu. Launch at login uses `SMAppService`, which sets the
+deployment target floor at macOS 13.
+
 ## Agent Workflow
 
 - Work in a new git worktree on a branch. Never commit directly to `master`.

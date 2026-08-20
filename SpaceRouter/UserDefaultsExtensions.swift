@@ -16,6 +16,7 @@ extension UserDefaults {
         static let targetBrowserBundleIdentifier = "targetBrowserBundleIdentifier"
         static let timeOfLastActivation = "timeOfLastActivation"
         static let activationDelayInterval = "activationDelayInterval"
+        static let hideDockIcon = "hideDockIcon"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -58,6 +59,16 @@ extension UserDefaults {
         }
         set {
             set(newValue, forKey: Keys.activationDelayInterval)
+            synchronize()
+        }
+    }
+
+    var hideDockIcon: Bool {
+        get {
+            return bool(forKey: Keys.hideDockIcon)
+        }
+        set {
+            set(newValue, forKey: Keys.hideDockIcon)
             synchronize()
         }
     }
