@@ -21,7 +21,9 @@ browser. Browser interaction uses the AppleScript scripting bridge.
 
 ## Installation
 
-Build `SpaceRouter.xcodeproj` with Xcode. The app is ad-hoc signed.
+Build `SpaceRouter.xcodeproj` with Xcode. The app is ad-hoc signed with a
+stable designated requirement, so the Accessibility and Automation grants
+survive rebuilds. See CLAUDE.md for the trade-off.
 
 * Move `SpaceRouter.app` into your `Applications` folder
 * Launch `SpaceRouter`

@@ -26,5 +26,15 @@ mainline.
   commit count. The placeholder values in `SpaceRouter/Info.plist` are not the
   real ones.
 - The app is ad-hoc signed with the hardened runtime and the
-  `com.apple.security.automation.apple-events` entitlement. macOS resets the
-  Accessibility and Automation grants whenever the ad-hoc signature changes.
+  `com.apple.security.automation.apple-events` entitlement.
+- Ad-hoc signing normally keys TCC grants to the build's cdhash, so every
+  rebuild would reset the Accessibility and Automation grants. To prevent
+  that, `OTHER_CODE_SIGN_FLAGS` sets an explicit designated requirement,
+  `designated => identifier "com.lubelski.SpaceRouter"`, which any build of
+  the app satisfies. Trade-off: any ad-hoc binary on this machine that claims
+  the identifier inherits the grants. Signing with a real certificate
+  (set `CODE_SIGN_IDENTITY` and remove the flag) is strictly stronger and
+  supersedes this.
+- If macOS prompts for Accessibility in a loop while System Settings shows
+  the app as approved, the TCC entry is stale. Clear it with
+  `tccutil reset Accessibility com.lubelski.SpaceRouter` and grant again.
