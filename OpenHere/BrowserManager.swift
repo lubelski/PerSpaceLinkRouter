@@ -70,7 +70,11 @@ class BrowserManager {
     private let defaults = UserDefaults.standard
 
     func setDefaultBrowser() {
-        LSSetDefaultHandlerForURLScheme("http" as CFString, Bundle.main.bundleIdentifier! as CFString)
+        NSWorkspace.shared.setDefaultApplication(at: Bundle.main.bundleURL, toOpenURLsWithScheme: "http") { error in
+            if let error = error {
+                NSLog("Failed to set default browser: \(error)")
+            }
+        }
     }
 
     func setTargetBrowser(index: Int) {

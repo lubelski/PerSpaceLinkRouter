@@ -1,5 +1,9 @@
 # OpenHere
 
+This is a private fork of [marcisme/OpenHere](https://github.com/marcisme/OpenHere),
+modernized for Apple Silicon and current macOS. It requires macOS 12 or later.
+The Sparkle auto-update framework was removed.
+
 Do you use Spaces/Mission Control on your Mac?
 
 Do you get frustrated when you open a web link, and you get switched to a
@@ -20,10 +24,12 @@ browser. Browser interaction uses the AppleScript scripting bridge.
 
 ## Installation
 
-* Download the DMG for the latest
-  [release](https://github.com/marcisme/OpenHere/releases)
-* Open the disk image
-* Drag `OpenHere` into your `Applications` folder
+Build `OpenHere.xcodeproj` with Xcode, or download the `OpenHere` artifact from
+the repository's GitHub Actions build. The app is ad-hoc signed. macOS
+quarantines a downloaded copy, so clear the quarantine flag before launch:
+`xattr -d com.apple.quarantine OpenHere.app`.
+
+* Move `OpenHere.app` into your `Applications` folder
 * Launch `OpenHere`
 * Click on the `Open System Preferences` button
 * Click the lock icon
@@ -35,8 +41,6 @@ browser. Browser interaction uses the AppleScript scripting bridge.
 * Click `Use OpenHere`
 * Open a link to verify it opens in your desired browser
 
-You can check for updates via the `OpenHere` > `Check for Updates...` menu item.
-
 ## Features
 
 * Open links in the current Space
@@ -47,8 +51,8 @@ You can check for updates via the `OpenHere` > `Check for Updates...` menu item.
 You should now be able to open links as you do normally, and they should always
 open in the current Space.
 
-If you want to change which browser `OpenHere` forwards links to or check for
-updates, launch `OpenHere` directly.
+If you want to change which browser `OpenHere` forwards links to, launch
+`OpenHere` directly.
 
 ![Select Browser](/images/select-browser.png)
 
@@ -75,8 +79,7 @@ browser-specific handling for [Chrome](/OpenHere/Browsers/Chrome.m),
 [Safari](/OpenHere/Browsers/Safari.m) and [Safari Technology
 Preview](/OpenHere/Browsers/SafariTechnologyPreview.m).
 
-The only third party framework in use is [Sparkle](https://sparkle-project.org),
-which provides the auto update functionality.
+This fork uses no third party frameworks.
 
 ## Contributions
 

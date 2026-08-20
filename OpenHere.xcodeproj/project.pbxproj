@@ -16,8 +16,6 @@
 		49895C121D5F9C6D00A7B5D5 /* Safari.m in Sources */ = {isa = PBXBuildFile; fileRef = 49895C0E1D5F9C6D00A7B5D5 /* Safari.m */; };
 		49895C141D5F9CD500A7B5D5 /* BrowserManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49895C131D5F9CD500A7B5D5 /* BrowserManager.swift */; };
 		49B781B81DE8D00900A0875F /* SafariTechnologyPreview.m in Sources */ = {isa = PBXBuildFile; fileRef = 49B781B71DE8D00900A0875F /* SafariTechnologyPreview.m */; };
-		49F05B862107C3870087B9E6 /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 49F05B852107C3870087B9E6 /* Sparkle.framework */; };
-		49F05B8A210A97CF0087B9E6 /* sparkle_dsa_pub.pem in Resources */ = {isa = PBXBuildFile; fileRef = 49F05B89210A97CF0087B9E6 /* sparkle_dsa_pub.pem */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -40,8 +38,6 @@
 		49B27FB61D51A9730094EE9C /* OpenHere-Bridging-Header.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "OpenHere-Bridging-Header.h"; sourceTree = "<group>"; };
 		49B781B61DE8CFC000A0875F /* SafariTechnologyPreview.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SafariTechnologyPreview.h; sourceTree = "<group>"; };
 		49B781B71DE8D00900A0875F /* SafariTechnologyPreview.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SafariTechnologyPreview.m; sourceTree = "<group>"; };
-		49F05B852107C3870087B9E6 /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = Carthage/Build/Mac/Sparkle.framework; sourceTree = "<group>"; };
-		49F05B89210A97CF0087B9E6 /* sparkle_dsa_pub.pem */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = sparkle_dsa_pub.pem; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,7 +45,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				49F05B862107C3870087B9E6 /* Sparkle.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -59,7 +54,6 @@
 		498763E31D4D84E9001A6121 = {
 			isa = PBXGroup;
 			children = (
-				49F05B852107C3870087B9E6 /* Sparkle.framework */,
 				498763EE1D4D84E9001A6121 /* OpenHere */,
 				498763ED1D4D84E9001A6121 /* Products */,
 				49F05B88210A97CE0087B9E6 /* Resources */,
@@ -108,7 +102,6 @@
 		49F05B88210A97CE0087B9E6 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				49F05B89210A97CF0087B9E6 /* sparkle_dsa_pub.pem */,
 				498763F11D4D84E9001A6121 /* Assets.xcassets */,
 				498763F31D4D84E9001A6121 /* MainMenu.xib */,
 			);
@@ -126,7 +119,6 @@
 				498763E81D4D84E9001A6121 /* Sources */,
 				498763E91D4D84E9001A6121 /* Frameworks */,
 				498763EA1D4D84E9001A6121 /* Resources */,
-				49492C1E2103A99600410BDF /* Carthage */,
 				49F05B87210926EF0087B9E6 /* Set Version */,
 			);
 			buildRules = (
@@ -145,13 +137,11 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0800;
-				LastUpgradeCheck = 0940;
+				LastUpgradeCheck = 1600;
 				ORGANIZATIONNAME = "Marc Schwieterman";
 				TargetAttributes = {
 					498763EB1D4D84E9001A6121 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = F7NXW9A7Z8;
-						DevelopmentTeamName = "Marc Schwieterman Software, LLC";
 						LastSwiftMigration = 0940;
 						ProvisioningStyle = Automatic;
 					};
@@ -180,7 +170,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				49F05B8A210A97CF0087B9E6 /* sparkle_dsa_pub.pem in Resources */,
 				498763F21D4D84E9001A6121 /* Assets.xcassets in Resources */,
 				498763F51D4D84E9001A6121 /* MainMenu.xib in Resources */,
 			);
@@ -189,22 +178,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		49492C1E2103A99600410BDF /* Carthage */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"$(SRCROOT)/Carthage/Build/Mac/Sparkle.framework",
-			);
-			name = Carthage;
-			outputPaths = (
-				"$(BUILT_PRODUCTS_DIR)/$(FRAMEWORKS_FOLDER_PATH)/Sparkle.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "/usr/local/bin/carthage copy-frameworks\n";
-		};
 		49F05B87210926EF0087B9E6 /* Set Version */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -217,7 +190,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "git=$(sh /etc/profile; which git)\ngit_release_version=$(\"$git\" describe --tags --always --abbrev=0)\nnumber_of_commits=$(\"$git\" rev-list master | wc -l | tr -d ' ')\ntarget_plist=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\ndsym_plist=\"$DWARF_DSYM_FOLDER_PATH/$DWARF_DSYM_FILE_NAME/Contents/Info.plist\"\n\nfor plist in \"$target_plist\" \"$dsym_plist\"; do\nif [ -f \"$plist\" ]; then\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $number_of_commits\" \"$plist\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleShortVersionString ${git_release_version#*v}\" \"$plist\"\nfi\ndone\n";
+			shellScript = "git=$(sh /etc/profile; which git)\ngit_release_version=$(\"$git\" describe --tags --always --abbrev=0)\nnumber_of_commits=$(\"$git\" rev-list HEAD | wc -l | tr -d ' ')\ntarget_plist=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"\ndsym_plist=\"$DWARF_DSYM_FOLDER_PATH/$DWARF_DSYM_FILE_NAME/Contents/Info.plist\"\n\nfor plist in \"$target_plist\" \"$dsym_plist\"; do\nif [ -f \"$plist\" ]; then\n/usr/libexec/PlistBuddy -c \"Set :CFBundleVersion $number_of_commits\" \"$plist\"\n/usr/libexec/PlistBuddy -c \"Set :CFBundleShortVersionString ${git_release_version#*v}\" \"$plist\"\nfi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -298,7 +271,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -349,7 +322,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.14;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
@@ -361,20 +334,17 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_ENTITLEMENTS = OpenHere/OpenHere.entitlements;
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = F7NXW9A7Z8;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Carthage/Build/Mac",
-				);
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = OpenHere/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mssft.OpenHere;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "OpenHere/OpenHere-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
 		};
@@ -383,19 +353,16 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_ENTITLEMENTS = OpenHere/OpenHere.entitlements;
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = F7NXW9A7Z8;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PROJECT_DIR)/Carthage/Build/Mac",
-				);
+				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = OpenHere/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.mssft.OpenHere;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "OpenHere/OpenHere-Bridging-Header.h";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
 		};
