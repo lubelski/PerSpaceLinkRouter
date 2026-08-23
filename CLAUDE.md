@@ -47,14 +47,11 @@ deployment target floor at macOS 13.
 
 ## TODO
 
-- [ ] Modernize the settings window UI. Current plan: keep the AppKit
-  lifecycle and host SwiftUI via `NSHostingController` — the macOS 13 floor
-  allows `Form` with `.formStyle(.grouped)` for the modern System Settings
-  look. While there: surface Accessibility/Automation/default-browser status
-  with fix-it buttons, consider exposing the activation delay, and title the
-  window "Settings". Note: the `activateInNewWindow` and
-  `activateInExistingWindow` defaults are registered but never read — remove
-  or wire them up.
+- [x] Modernize the settings window UI. Done: SwiftUI `Form` with
+  `.formStyle(.grouped)` hosted via `NSHostingController` in the AppKit
+  lifecycle (`SettingsView.swift`), with permission/default-browser status
+  rows, an activation delay stepper, and the dead `activateInNewWindow` /
+  `activateInExistingWindow` defaults removed.
 - [ ] Remove Safari Technology Preview support. Touches:
   `Browsers/SafariTechnologyPreview.{h,m}`,
   `Browsers/SafariTechnologyPreviewSupport.h`,

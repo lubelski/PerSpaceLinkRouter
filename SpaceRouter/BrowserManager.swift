@@ -23,7 +23,7 @@ class BrowserManager {
                 return nil
             }
             let resourceValues = try! applicationURL.resourceValues(forKeys: [.effectiveIconKey, .nameKey])
-            let name = resourceValues.name!
+            let name = (resourceValues.name! as NSString).deletingPathExtension
             let image = resourceValues.effectiveIcon as! NSImage
             return BrowserDescription(bundleIdentifier: bundleIdentifier, name: name, image: image, isTargetBrowser: self.isTargetBrowser(bundleIdentifier))
         }
@@ -75,16 +75,17 @@ class BrowserManager {
 
     private let defaults = UserDefaults.standard
 
-    func setDefaultBrowser() {
+    func setDefaultBrowser(completion: ((Error?) -> Void)? = nil) {
         NSWorkspace.shared.setDefaultApplication(at: Bundle.main.bundleURL, toOpenURLsWithScheme: "http") { error in
             if let error = error {
                 NSLog("Failed to set default browser: \(error)")
             }
+            completion?(error)
         }
     }
 
-    func setTargetBrowser(index: Int) {
-        defaults.targetBrowserBundleIdentifier = browserDescriptions[index].bundleIdentifier
+    func setTargetBrowser(bundleIdentifier: String) {
+        defaults.targetBrowserBundleIdentifier = bundleIdentifier
     }
 
     func openURL(url: String) {
