@@ -32,7 +32,9 @@ survive rebuilds. See CLAUDE.md for the trade-off.
 * Launch `SpaceRouter` again
 * Select the browser you want links opened with
 * Click the `Set SpaceRouter as Default Browser` button
-* Open a link to verify it opens in your desired browser
+* Open a link to verify it opens in your desired browser. The first open
+  triggers an Automation permission prompt ("SpaceRouter wants access to
+  control ..."); allow it so `SpaceRouter` can drive the browser
 
 ## Features
 
@@ -54,8 +56,6 @@ menu bar icon and choose `Settings…`.
 If you lose track of the window and the menu bar icon, launch `SpaceRouter`
 again. Reopening a running instance always shows the settings window.
 
-![Select Browser](/images/select-browser.png)
-
 If you decide `SpaceRouter` isn't for you, you can restore your preferred
 default browser by selecting it in `System Settings` > `Desktop & Dock` >
 `Default web browser`.
@@ -73,9 +73,11 @@ Current versions of the following should work.
 `SpaceRouter` does not and will never log anything about the URLs that it
 opens.
 
-You can walk through the entire execution path from where the [link open event
-is handled](/SpaceRouter/AppDelegate.swift#L80-L86), to the [general
-browser handling](/SpaceRouter/BrowserManager.swift#L84-L99), to the
+You can walk through the entire execution path from where the link open event
+is handled (`handleGetURLEvent` in
+[AppDelegate.swift](/SpaceRouter/AppDelegate.swift)), to the general browser
+handling (`openURL` in
+[BrowserManager.swift](/SpaceRouter/BrowserManager.swift)), to the
 browser-specific handling for [Chrome](/SpaceRouter/Browsers/Chrome.m),
 [Safari](/SpaceRouter/Browsers/Safari.m) and [Safari Technology
 Preview](/SpaceRouter/Browsers/SafariTechnologyPreview.m).
