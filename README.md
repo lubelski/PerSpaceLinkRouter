@@ -53,6 +53,10 @@ open in the current Space.
 forwards links to, or to toggle the Dock icon and start at login, click the
 menu bar icon and choose `Settings…`.
 
+![Menu bar icon](/images/menubar.png)
+
+![Settings window](/images/settings.png)
+
 If you lose track of the window and the menu bar icon, launch `SpaceRouter`
 again. Reopening a running instance always shows the settings window.
 

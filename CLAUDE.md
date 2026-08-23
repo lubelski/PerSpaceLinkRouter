@@ -52,7 +52,8 @@ deployment target floor at macOS 13.
   lifecycle (`SettingsView.swift`), with permission/default-browser status
   rows, an activation delay stepper, and the dead `activateInNewWindow` /
   `activateInExistingWindow` defaults removed.
-- [ ] Remove Safari Technology Preview support. Touches:
+- [ ] Maybe: remove Safari Technology Preview support — not yet decided,
+  don't do this without checking in. Touches:
   `Browsers/SafariTechnologyPreview.{h,m}`,
   `Browsers/SafariTechnologyPreviewSupport.h`,
   `SpaceRouter-Bridging-Header.h`, `BrowserManager.swift` (bundle id
@@ -68,6 +69,6 @@ deployment target floor at macOS 13.
   verify before shipping: which window `--new-tab` targets when windows exist
   in multiple Spaces, and whether focus stealing respects the activation
   throttle.
-- [ ] Retake `images/select-browser.png` after the UI work — the current
-  screenshot is from the original OpenHere app and predates the menu bar
-  agent UI.
+- [x] Retake the README screenshots. Done: `images/settings.png` (SwiftUI
+  settings window) and `images/menubar.png` (menu bar with the new glyph)
+  replace the OpenHere-era `select-browser.png`.
