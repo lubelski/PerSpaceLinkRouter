@@ -23,7 +23,7 @@ class BrowserManager {
                 return nil
             }
             let resourceValues = try! applicationURL.resourceValues(forKeys: [.effectiveIconKey, .nameKey])
-            let name = resourceValues.name!
+            let name = (resourceValues.name! as NSString).deletingPathExtension
             let image = resourceValues.effectiveIcon as! NSImage
             return BrowserDescription(bundleIdentifier: bundleIdentifier, name: name, image: image, isTargetBrowser: self.isTargetBrowser(bundleIdentifier))
         }
