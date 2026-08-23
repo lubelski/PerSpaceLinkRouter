@@ -50,7 +50,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setUpStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        if let image = NSImage(systemSymbolName: "arrow.triangle.branch", accessibilityDescription: "SpaceRouter") {
+        if let image = NSImage(named: "MenuBarIcon") {
+            image.isTemplate = true
+            image.accessibilityDescription = "SpaceRouter"
             item.button?.image = image
         } else {
             item.button?.title = "SR"
