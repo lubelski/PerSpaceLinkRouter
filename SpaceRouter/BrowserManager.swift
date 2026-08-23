@@ -75,16 +75,17 @@ class BrowserManager {
 
     private let defaults = UserDefaults.standard
 
-    func setDefaultBrowser() {
+    func setDefaultBrowser(completion: ((Error?) -> Void)? = nil) {
         NSWorkspace.shared.setDefaultApplication(at: Bundle.main.bundleURL, toOpenURLsWithScheme: "http") { error in
             if let error = error {
                 NSLog("Failed to set default browser: \(error)")
             }
+            completion?(error)
         }
     }
 
-    func setTargetBrowser(index: Int) {
-        defaults.targetBrowserBundleIdentifier = browserDescriptions[index].bundleIdentifier
+    func setTargetBrowser(bundleIdentifier: String) {
+        defaults.targetBrowserBundleIdentifier = bundleIdentifier
     }
 
     func openURL(url: String) {

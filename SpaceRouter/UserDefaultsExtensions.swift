@@ -11,8 +11,6 @@ import Foundation
 extension UserDefaults {
 
     private struct Keys {
-        static let activateInNewWindow = "activateInNewWindow"
-        static let activateInExistingWindow = "activateInExistingWindow"
         static let targetBrowserBundleIdentifier = "targetBrowserBundleIdentifier"
         static let timeOfLastActivation = "timeOfLastActivation"
         static let activationDelayInterval = "activationDelayInterval"
@@ -20,18 +18,8 @@ extension UserDefaults {
     }
 
     private static let defaultValues: [String: Any] = [
-        Keys.activateInNewWindow: true,
-        Keys.activateInExistingWindow: false,
         Keys.activationDelayInterval: 10
     ]
-
-    var activateInNewWindow: Bool {
-        return bool(forKey: Keys.activateInNewWindow)
-    }
-
-    var activateInExistingWindow: Bool {
-        return bool(forKey: Keys.activateInExistingWindow)
-    }
 
     var targetBrowserBundleIdentifier: String? {
         get {
