@@ -4,8 +4,8 @@ function generate {
   local -r browser_url=$1
   local -r base_name=$2
   echo "sdef $browser_url | sdp -fh --basename $base_name" | bash
-  echo "mv $base_name.h SpaceRouter/Browsers/${base_name}Support.h" | bash
-  echo "Created SpaceRouter/Browsers/${base_name}Support.h"
+  echo "mv $base_name.h PerSpaceLinkRouter/Browsers/${base_name}Support.h" | bash
+  echo "Created PerSpaceLinkRouter/Browsers/${base_name}Support.h"
 }
 
 generate '/Applications/Safari.app' 'Safari'

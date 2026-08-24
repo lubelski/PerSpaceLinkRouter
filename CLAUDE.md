@@ -1,8 +1,8 @@
-# SpaceRouter
+# PerSpaceLinkRouter
 
 macOS AppKit app (Swift 5 plus Objective-C ScriptingBridge wrappers) that opens
 web links in a browser window in the current Space. Derived from OpenHere by
-Marc Schwieterman (GPL). `origin` is github.com/lubelski/SpaceRouter and
+Marc Schwieterman (GPL). `origin` is github.com/lubelski/PerSpaceLinkRouter and
 `master` is the mainline.
 
 The app runs as a resident menu bar agent. `LSUIElement` is set in Info.plist,
@@ -26,24 +26,24 @@ deployment target floor at macOS 13.
   commands with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
   instead of switching it, which needs sudo.
 - Release build:
-  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project SpaceRouter.xcodeproj -target SpaceRouter -configuration Release build`
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild -project PerSpaceLinkRouter.xcodeproj -target PerSpaceLinkRouter -configuration Release build`
 - The Set Version build phase stamps versions from git history:
   CFBundleShortVersionString from the latest tag and CFBundleVersion from the
-  commit count. The placeholder values in `SpaceRouter/Info.plist` are not the
+  commit count. The placeholder values in `PerSpaceLinkRouter/Info.plist` are not the
   real ones.
 - The app is ad-hoc signed with the hardened runtime and the
   `com.apple.security.automation.apple-events` entitlement.
 - Ad-hoc signing normally keys TCC grants to the build's cdhash, so every
   rebuild would reset the Accessibility and Automation grants. To prevent
   that, `OTHER_CODE_SIGN_FLAGS` sets an explicit designated requirement,
-  `designated => identifier "com.lubelski.SpaceRouter"`, which any build of
+  `designated => identifier "com.lubelski.PerSpaceLinkRouter"`, which any build of
   the app satisfies. Trade-off: any ad-hoc binary on this machine that claims
   the identifier inherits the grants. Signing with a real certificate
   (set `CODE_SIGN_IDENTITY` and remove the flag) is strictly stronger and
   supersedes this.
 - If macOS prompts for Accessibility in a loop while System Settings shows
   the app as approved, the TCC entry is stale. Clear it with
-  `tccutil reset Accessibility com.lubelski.SpaceRouter` and grant again.
+  `tccutil reset Accessibility com.lubelski.PerSpaceLinkRouter` and grant again.
 
 ## Releasing
 
@@ -58,7 +58,7 @@ deployment target floor at macOS 13.
 - Developer ID builds override `OTHER_CODE_SIGN_FLAGS` to `--timestamp`,
   dropping the ad-hoc designated-requirement workaround. Existing TCC grants
   still match because they were stored as
-  `identifier "com.lubelski.SpaceRouter"`.
+  `identifier "com.lubelski.PerSpaceLinkRouter"`.
 - One-time setup, in order:
   1. Apple Developer Program membership on the Apple ID signed into Xcode.
   2. Xcode > Settings > Accounts > Manage Certificates > + > Developer ID
@@ -66,7 +66,7 @@ deployment target floor at macOS 13.
      list it.
   3. An app-specific password from account.apple.com, stored for
      notarytool:
-     `xcrun notarytool store-credentials SpaceRouter --apple-id <id> --team-id <TEAM>`.
+     `xcrun notarytool store-credentials PerSpaceLinkRouter --apple-id <id> --team-id <TEAM>`.
   4. `gh auth login` if needed.
 
 ## TODO
@@ -80,7 +80,7 @@ deployment target floor at macOS 13.
   don't do this without checking in. Touches:
   `Browsers/SafariTechnologyPreview.{h,m}`,
   `Browsers/SafariTechnologyPreviewSupport.h`,
-  `SpaceRouter-Bridging-Header.h`, `BrowserManager.swift` (bundle id
+  `PerSpaceLinkRouter-Bridging-Header.h`, `BrowserManager.swift` (bundle id
   constant, `supportedBrowsers`, `supportedBrowserOrder`), `project.pbxproj`,
   `bin/generate-scripting-bridge-headers`, and the README browser list.
 - [ ] Add Firefox support. Firefox has no AppleScript/ScriptingBridge

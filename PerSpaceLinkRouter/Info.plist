@@ -60,7 +60,7 @@
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
-	<string>SpaceRouter uses AppleEvents to open links in your web browser.</string>
+	<string>PerSpaceLinkRouter uses AppleEvents to open links in your web browser.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2016 Marc Schwieterman. All rights reserved.</string>
 	<key>NSMainNibFile</key>

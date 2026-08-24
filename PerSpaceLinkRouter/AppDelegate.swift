@@ -52,18 +52,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let image = NSImage(named: "MenuBarIcon") {
             image.isTemplate = true
-            image.accessibilityDescription = "SpaceRouter"
+            image.accessibilityDescription = "PerSpaceLinkRouter"
             item.button?.image = image
         } else {
             item.button?.title = "SR"
         }
-        item.button?.toolTip = "SpaceRouter"
+        item.button?.toolTip = "PerSpaceLinkRouter"
         let menu = NSMenu()
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettingsFromMenu(_:)), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit SpaceRouter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Quit PerSpaceLinkRouter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
         item.menu = menu
         statusItem = item
     }
@@ -94,7 +94,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model)))
         window.styleMask = [.titled, .closable, .miniaturizable]
-        window.title = "SpaceRouter Settings"
+        window.title = "PerSpaceLinkRouter Settings"
         window.isReleasedWhenClosed = false
         window.center()
         return window
