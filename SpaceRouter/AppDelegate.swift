@@ -113,4 +113,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    // Local HTML files opened via Finder ("Open With") arrive here rather
+    // than as a GetURL event. The document type claim exists so the app is
+    // listed in System Settings' default browser picker, which requires
+    // public.html in addition to the http/https schemes.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        launchedToOpenURL = true
+        for url in urls {
+            browserManager.openURL(url: url.absoluteString)
+        }
+    }
+
 }
