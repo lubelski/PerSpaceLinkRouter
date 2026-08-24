@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Build, sign, notarize, and publish a SpaceRouter release to GitHub.
+# Build, sign, notarize, and publish a PerSpaceLinkRouter release to GitHub.
 #
 #   bin/release --check            report signing/notarization readiness
 #   bin/release [opts] <version>   cut a release, e.g. bin/release 0.2.0
@@ -14,12 +14,12 @@
 #               affects the zip name.
 #
 # Environment:
-#   SPACEROUTER_SIGN_IDENTITY   "Developer ID Application: ..." identity name
+#   PERSPACELINKROUTER_SIGN_IDENTITY   "Developer ID Application: ..." identity name
 #                               or SHA-1. Default: the first such identity in
 #                               the keychain.
-#   SPACEROUTER_NOTARY_PROFILE  notarytool keychain profile name.
-#                               Default: SpaceRouter. Create it once with
-#                               `xcrun notarytool store-credentials SpaceRouter`.
+#   PERSPACELINKROUTER_NOTARY_PROFILE  notarytool keychain profile name.
+#                               Default: PerSpaceLinkRouter. Create it once with
+#                               `xcrun notarytool store-credentials PerSpaceLinkRouter`.
 #
 # The Set Version build phase stamps CFBundleShortVersionString from the
 # newest tag, so the tag is created before the build and deleted if anything
@@ -29,7 +29,7 @@ set -euo pipefail
 
 root=$(cd "$(dirname "$0")/.." && pwd)
 export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
-notary_profile=${SPACEROUTER_NOTARY_PROFILE:-SpaceRouter}
+notary_profile=${PERSPACELINKROUTER_NOTARY_PROFILE:-PerSpaceLinkRouter}
 
 check_only=false
 adhoc=false
@@ -53,8 +53,8 @@ fail() { echo "error: $*" >&2; exit 1; }
 # ---------------------------------------------------------------- readiness
 
 find_identity() {
-    if [[ -n "${SPACEROUTER_SIGN_IDENTITY:-}" ]]; then
-        echo "$SPACEROUTER_SIGN_IDENTITY"
+    if [[ -n "${PERSPACELINKROUTER_SIGN_IDENTITY:-}" ]]; then
+        echo "$PERSPACELINKROUTER_SIGN_IDENTITY"
         return
     fi
     security find-identity -v -p codesigning 2>/dev/null \
@@ -144,14 +144,14 @@ trap cleanup EXIT
 
 if ! $dry_run; then
     log "Tagging $version"
-    git tag -a "$version" -m "SpaceRouter $version"
+    git tag -a "$version" -m "PerSpaceLinkRouter $version"
     tagged=true
 fi
 
 # -------------------------------------------------------------------- build
 
 build_dir=$root/build/release
-app=$build_dir/Release/SpaceRouter.app
+app=$build_dir/Release/PerSpaceLinkRouter.app
 rm -rf "$build_dir"
 
 log "Building Release"
@@ -160,7 +160,7 @@ if [[ -n "$identity" ]]; then
     # Overriding OTHER_CODE_SIGN_FLAGS drops the ad-hoc designated-requirement
     # workaround from the project; a real certificate yields a stable
     # requirement on its own. Existing TCC grants still match because they
-    # were stored as `identifier "com.lubelski.SpaceRouter"`, which any
+    # were stored as `identifier "com.lubelski.PerSpaceLinkRouter"`, which any
     # signature of this bundle satisfies.
     sign_settings=(
         "CODE_SIGN_IDENTITY=$identity"
@@ -168,14 +168,14 @@ if [[ -n "$identity" ]]; then
         "OTHER_CODE_SIGN_FLAGS=--timestamp"
     )
 fi
-xcodebuild -project SpaceRouter.xcodeproj -target SpaceRouter -configuration Release \
+xcodebuild -project PerSpaceLinkRouter.xcodeproj -target PerSpaceLinkRouter -configuration Release \
     SYMROOT="$build_dir" ${sign_settings[@]+"${sign_settings[@]}"} build \
     | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
 [[ -d "$app" ]] || fail "build did not produce $app"
 
 built_version=$(plutil -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist")
 built_build=$(plutil -extract CFBundleVersion raw -o - "$app/Contents/Info.plist")
-log "Built SpaceRouter $built_version ($built_build)"
+log "Built PerSpaceLinkRouter $built_version ($built_build)"
 if ! $dry_run && [[ "$built_version" != "$version" ]]; then
     fail "built version $built_version does not match tag $version"
 fi
@@ -187,7 +187,7 @@ codesign -d --requirements - "$app" 2>&1 | grep -E "^designated" || true
 
 # ---------------------------------------------------------------- notarize
 
-zip=$build_dir/SpaceRouter-$zip_version.zip
+zip=$build_dir/PerSpaceLinkRouter-$zip_version.zip
 make_zip() { rm -f "$zip"; ditto -c -k --keepParent "$app" "$zip"; }
 
 if ! $adhoc; then
@@ -220,5 +220,5 @@ notes_flags=(--generate-notes)
 if $adhoc; then
     notes_flags+=(--notes "Ad-hoc signed build: macOS will block it on first launch. Open System Settings > Privacy & Security and choose Open Anyway.")
 fi
-gh release create "$version" "$zip" --title "SpaceRouter $version" --verify-tag "${notes_flags[@]}"
+gh release create "$version" "$zip" --title "PerSpaceLinkRouter $version" --verify-tag "${notes_flags[@]}"
 log "Done: $(gh release view "$version" --json url -q .url)"

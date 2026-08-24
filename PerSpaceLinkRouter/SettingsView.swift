@@ -1,6 +1,6 @@
 //
 //  SettingsView.swift
-//  SpaceRouter
+//  PerSpaceLinkRouter
 //
 
 import AppKit
@@ -148,9 +148,9 @@ struct SettingsView: View {
                 }
                 LabeledContent("Default browser") {
                     if model.isDefaultBrowser {
-                        grantedLabel("SpaceRouter")
+                        grantedLabel("PerSpaceLinkRouter")
                     } else {
-                        Button("Set SpaceRouter as Default…") {
+                        Button("Set PerSpaceLinkRouter as Default…") {
                             model.setDefaultBrowser()
                         }
                     }
