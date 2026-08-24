@@ -45,6 +45,30 @@ deployment target floor at macOS 13.
   the app as approved, the TCC entry is stale. Clear it with
   `tccutil reset Accessibility com.lubelski.SpaceRouter` and grant again.
 
+## Releasing
+
+- `bin/release <version>` tags, builds, signs with Developer ID, notarizes,
+  staples, zips, pushes the tag, and creates the GitHub release with
+  generated notes. `bin/release --check` reports what is missing.
+  `--dry-run` does everything except tag and publish; `--adhoc` ad-hoc
+  signs and skips notarization (Gatekeeper blocks such builds on other
+  Macs, so only use it until the certificate exists).
+- Tag before build is deliberate: the Set Version phase reads the newest
+  tag. The script removes the tag if anything fails before publishing.
+- Developer ID builds override `OTHER_CODE_SIGN_FLAGS` to `--timestamp`,
+  dropping the ad-hoc designated-requirement workaround. Existing TCC grants
+  still match because they were stored as
+  `identifier "com.lubelski.SpaceRouter"`.
+- One-time setup, in order:
+  1. Apple Developer Program membership on the Apple ID signed into Xcode.
+  2. Xcode > Settings > Accounts > Manage Certificates > + > Developer ID
+     Application. `security find-identity -v -p codesigning` should then
+     list it.
+  3. An app-specific password from account.apple.com, stored for
+     notarytool:
+     `xcrun notarytool store-credentials SpaceRouter --apple-id <id> --team-id <TEAM>`.
+  4. `gh auth login` if needed.
+
 ## TODO
 
 - [x] Modernize the settings window UI. Done: SwiftUI `Form` with

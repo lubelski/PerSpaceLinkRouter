@@ -1,0 +1,224 @@
+#!/bin/bash
+#
+# Build, sign, notarize, and publish a SpaceRouter release to GitHub.
+#
+#   bin/release --check            report signing/notarization readiness
+#   bin/release [opts] <version>   cut a release, e.g. bin/release 0.2.0
+#
+# Options:
+#   --adhoc     ad-hoc sign and skip notarization. The zip will be blocked by
+#               Gatekeeper on other Macs; only useful until a Developer ID
+#               certificate is available.
+#   --dry-run   build, sign, notarize and zip, but do not tag, push, or
+#               create the GitHub release. <version> is optional and only
+#               affects the zip name.
+#
+# Environment:
+#   SPACEROUTER_SIGN_IDENTITY   "Developer ID Application: ..." identity name
+#                               or SHA-1. Default: the first such identity in
+#                               the keychain.
+#   SPACEROUTER_NOTARY_PROFILE  notarytool keychain profile name.
+#                               Default: SpaceRouter. Create it once with
+#                               `xcrun notarytool store-credentials SpaceRouter`.
+#
+# The Set Version build phase stamps CFBundleShortVersionString from the
+# newest tag, so the tag is created before the build and deleted if anything
+# fails before the release is published.
+
+set -euo pipefail
+
+root=$(cd "$(dirname "$0")/.." && pwd)
+export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
+notary_profile=${SPACEROUTER_NOTARY_PROFILE:-SpaceRouter}
+
+check_only=false
+adhoc=false
+dry_run=false
+version=""
+
+for arg in "$@"; do
+    case "$arg" in
+        --check) check_only=true ;;
+        --adhoc) adhoc=true ;;
+        --dry-run) dry_run=true ;;
+        -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -*) echo "unknown option: $arg" >&2; exit 2 ;;
+        *) version=$arg ;;
+    esac
+done
+
+log() { printf '\033[1m==> %s\033[0m\n' "$*"; }
+fail() { echo "error: $*" >&2; exit 1; }
+
+# ---------------------------------------------------------------- readiness
+
+find_identity() {
+    if [[ -n "${SPACEROUTER_SIGN_IDENTITY:-}" ]]; then
+        echo "$SPACEROUTER_SIGN_IDENTITY"
+        return
+    fi
+    security find-identity -v -p codesigning 2>/dev/null \
+        | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1
+}
+
+have_notary_profile() {
+    xcrun notarytool history --keychain-profile "$notary_profile" >/dev/null 2>&1
+}
+
+readiness() {
+    local ok=true
+    local identity
+    identity=$(find_identity)
+
+    printf '%-36s ' "Xcode:"
+    if xcodebuild -version >/dev/null 2>&1; then
+        xcodebuild -version | head -1
+    else
+        echo "MISSING (DEVELOPER_DIR=$DEVELOPER_DIR)"; ok=false
+    fi
+
+    printf '%-36s ' "Developer ID identity:"
+    if [[ -n "$identity" ]]; then
+        echo "$identity"
+    else
+        echo "MISSING - create one in Xcode > Settings > Accounts > Manage Certificates"; ok=false
+    fi
+
+    printf '%-36s ' "notarytool profile '$notary_profile':"
+    if have_notary_profile; then
+        echo "ok"
+    else
+        echo "MISSING - run: xcrun notarytool store-credentials $notary_profile --apple-id <id> --team-id <TEAM>"; ok=false
+    fi
+
+    printf '%-36s ' "gh auth:"
+    if gh auth status >/dev/null 2>&1; then
+        echo "ok"
+    else
+        echo "MISSING - run: gh auth login"; ok=false
+    fi
+
+    $ok
+}
+
+if $check_only; then
+    readiness && echo "Ready to release." || { echo "Not ready."; exit 1; }
+    exit 0
+fi
+
+# ------------------------------------------------------------ preconditions
+
+cd "$root"
+
+if ! $dry_run; then
+    [[ -n "$version" ]] || fail "usage: bin/release [--adhoc] [--dry-run] <version>"
+    [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "version must look like 1.2.3, got '$version'"
+    [[ "$(git branch --show-current)" == master ]] || fail "release from master"
+    [[ -z "$(git status --porcelain)" ]] || fail "working tree is not clean"
+    git fetch -q origin
+    [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/master)" ]] || fail "master is not in sync with origin/master"
+    ! git rev-parse -q --verify "refs/tags/$version" >/dev/null || fail "tag $version already exists"
+    ! git ls-remote --exit-code --tags origin "$version" >/dev/null 2>&1 || fail "tag $version already exists on origin"
+    gh auth status >/dev/null 2>&1 || fail "gh is not authenticated"
+fi
+
+identity=""
+if $adhoc; then
+    log "Ad-hoc signing; the release will not pass Gatekeeper on other Macs"
+else
+    identity=$(find_identity)
+    [[ -n "$identity" ]] || fail "no Developer ID Application identity found (use --adhoc, or see bin/release --check)"
+    have_notary_profile || fail "notarytool profile '$notary_profile' not found (see bin/release --check)"
+fi
+
+# ---------------------------------------------------------------------- tag
+
+tagged=false
+cleanup() {
+    if $tagged; then
+        echo "release failed; removing local tag $version" >&2
+        git tag -d "$version" >/dev/null
+    fi
+}
+trap cleanup EXIT
+
+if ! $dry_run; then
+    log "Tagging $version"
+    git tag -a "$version" -m "SpaceRouter $version"
+    tagged=true
+fi
+
+# -------------------------------------------------------------------- build
+
+build_dir=$root/build/release
+app=$build_dir/Release/SpaceRouter.app
+rm -rf "$build_dir"
+
+log "Building Release"
+sign_settings=()
+if [[ -n "$identity" ]]; then
+    # Overriding OTHER_CODE_SIGN_FLAGS drops the ad-hoc designated-requirement
+    # workaround from the project; a real certificate yields a stable
+    # requirement on its own. Existing TCC grants still match because they
+    # were stored as `identifier "com.lubelski.SpaceRouter"`, which any
+    # signature of this bundle satisfies.
+    sign_settings=(
+        "CODE_SIGN_IDENTITY=$identity"
+        "CODE_SIGN_STYLE=Manual"
+        "OTHER_CODE_SIGN_FLAGS=--timestamp"
+    )
+fi
+xcodebuild -project SpaceRouter.xcodeproj -target SpaceRouter -configuration Release \
+    SYMROOT="$build_dir" ${sign_settings[@]+"${sign_settings[@]}"} build \
+    | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
+[[ -d "$app" ]] || fail "build did not produce $app"
+
+built_version=$(plutil -extract CFBundleShortVersionString raw -o - "$app/Contents/Info.plist")
+built_build=$(plutil -extract CFBundleVersion raw -o - "$app/Contents/Info.plist")
+log "Built SpaceRouter $built_version ($built_build)"
+if ! $dry_run && [[ "$built_version" != "$version" ]]; then
+    fail "built version $built_version does not match tag $version"
+fi
+zip_version=${version:-$built_version}
+
+log "Verifying signature"
+codesign --verify --deep --strict --verbose=2 "$app"
+codesign -d --requirements - "$app" 2>&1 | grep -E "^designated" || true
+
+# ---------------------------------------------------------------- notarize
+
+zip=$build_dir/SpaceRouter-$zip_version.zip
+make_zip() { rm -f "$zip"; ditto -c -k --keepParent "$app" "$zip"; }
+
+if ! $adhoc; then
+    log "Submitting to Apple notary service"
+    make_zip
+    xcrun notarytool submit "$zip" --keychain-profile "$notary_profile" --wait
+    log "Stapling ticket"
+    xcrun stapler staple "$app"
+    log "Gatekeeper assessment"
+    spctl --assess --type execute --verbose=2 "$app"
+fi
+
+log "Packaging $(basename "$zip")"
+make_zip
+ls -lh "$zip"
+
+if $dry_run; then
+    log "Dry run complete; nothing tagged or published"
+    exit 0
+fi
+
+# ----------------------------------------------------------------- publish
+
+log "Pushing tag"
+git push origin "$version"
+tagged=false  # published; keep the tag on failure from here on
+
+log "Creating GitHub release"
+notes_flags=(--generate-notes)
+if $adhoc; then
+    notes_flags+=(--notes "Ad-hoc signed build: macOS will block it on first launch. Open System Settings > Privacy & Security and choose Open Anyway.")
+fi
+gh release create "$version" "$zip" --title "SpaceRouter $version" --verify-tag "${notes_flags[@]}"
+log "Done: $(gh release view "$version" --json url -q .url)"
