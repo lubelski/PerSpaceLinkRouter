@@ -10,8 +10,31 @@ import ApplicationServices
 import Foundation
 
 extension AXUIElement {
-    var hasWindowInCurrentSpace: Bool {
-        return windows?.first(where: { $0.subrole == "AXStandardWindow" }) != nil
+    /// The application's standard windows that are on an active Space and not
+    /// minimized. The Accessibility API omits windows on inactive Spaces. With
+    /// "Displays have separate Spaces" on, every display has an active Space,
+    /// so this list spans all displays and the caller narrows it by display.
+    var visibleStandardWindows: [AXUIElement] {
+        return (windows ?? []).filter { $0.subrole == kAXStandardWindowSubrole && !$0.isMinimized }
+    }
+
+    /// The window frame in top-left-origin global coordinates.
+    var frame: CGRect? {
+        guard let positionValue = axValue(attributeName: kAXPositionAttribute),
+              let sizeValue = axValue(attributeName: kAXSizeAttribute) else {
+            return nil
+        }
+        var position = CGPoint.zero
+        var size = CGSize.zero
+        guard AXValueGetValue(positionValue, .cgPoint, &position),
+              AXValueGetValue(sizeValue, .cgSize, &size) else {
+            return nil
+        }
+        return CGRect(origin: position, size: size)
+    }
+
+    var isMinimized: Bool {
+        return attributeValue(attributeName: kAXMinimizedAttribute) as? Bool ?? false
     }
 
     var attributeNames: [String]? {
@@ -26,14 +49,10 @@ extension AXUIElement {
     }
 
     var windows: [AXUIElement]? {
-        var windows: CFArray?
-        let error = withUnsafeMutablePointer(to: &windows) { pointer -> AXError in
-            AXUIElementCopyAttributeValues(self, kAXWindowsAttribute as CFString, 0, 10, pointer)
+        guard let windows = attributeValue(attributeName: kAXWindowsAttribute) else {
+            return .none
         }
-        if error == .success {
-            return windows as AnyObject as? [AXUIElement]
-        }
-        return .none
+        return windows as? [AXUIElement]
     }
 
     var role: String? {
@@ -53,5 +72,13 @@ extension AXUIElement {
             return value
         }
         return .none
+    }
+
+    private func axValue(attributeName: String) -> AXValue? {
+        guard let value = attributeValue(attributeName: attributeName),
+              CFGetTypeID(value) == AXValueGetTypeID() else {
+            return nil
+        }
+        return unsafeDowncast(value, to: AXValue.self)
     }
 }

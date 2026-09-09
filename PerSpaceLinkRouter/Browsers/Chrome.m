@@ -24,56 +24,12 @@
     return self;
 }
 
-- (void)openURL:(NSString*) url inBrowserTarget:(BrowserTarget) browserTarget {
+- (ChromeApplication*)application {
+    return [SBApplication applicationWithBundleIdentifier:self.bundleIdentifier];
+}
+
+- (void)openURL:(NSString*) url {
     NSParameterAssert(url);
-    NSParameterAssert(browserTarget);
-    [self openURL:url inBrowserTarget:browserTarget andActivate:false];
-}
-
-- (void)openURL:(NSString*) url inBrowserTarget:(BrowserTarget) browserTarget andActivate:(BOOL) activate {
-    NSParameterAssert(url);
-    NSParameterAssert(browserTarget);
-
-    switch (browserTarget) {
-        case BrowserTargetNewWindow: {
-            [self openURL:url inNewWindowAndActivate:activate];
-            break;
-        }
-        case BrowserTargetNewTab: {
-            [self openURL:url inNewTabAndActivate:activate];
-            break;
-        }
-        default: {
-            [self openURL:url];
-            break;
-        }
-    }
-}
-
-- (void)openURL:(NSString *)url inNewWindowAndActivate:(BOOL)activate {
-    ChromeApplication* application =
-    [SBApplication applicationWithBundleIdentifier:self.bundleIdentifier];
-    ChromeWindow* newWindow = [[[application classForScriptingClass:@"window"] alloc] init];
-    [[application windows] addObject:newWindow];
-    newWindow.activeTab.URL = url;
-    if (activate) {
-        [application activate];
-    }
-}
-
-- (void)openURL:(NSString *)url inNewTabAndActivate:(BOOL)activate {
-    ChromeApplication* application =
-    [SBApplication applicationWithBundleIdentifier:self.bundleIdentifier];
-    ChromeWindow *frontWindow = [[application windows] firstObject];
-    ChromeTab *newTab = [[[application classForScriptingClass:@"tab"] alloc] init];
-    [frontWindow.tabs addObject:newTab];
-    frontWindow.activeTab.URL = url;
-    if (activate) {
-        [application activate];
-    }
-}
-
-- (void)openURL:(NSString *)url {
     NSWorkspace* workspace = [NSWorkspace sharedWorkspace];
     NSURL* applicationURL = [workspace URLForApplicationWithBundleIdentifier:self.bundleIdentifier];
     NSURL* urlToOpen = [NSURL URLWithString:url];
@@ -91,6 +47,50 @@
             NSLog(@"Failed to launch Chrome: %@", error);
         }
     }];
+}
+
+- (BOOL)openURL:(NSString*) url inNewTabOfWindowWithBounds:(NSArray<NSValue*>*) windowBounds andActivate:(BOOL) activate {
+    NSParameterAssert(url);
+    ChromeApplication* application = self.application;
+
+    // `windows` is ordered front to back, so the first match is the frontmost
+    // window on the target display.
+    ChromeWindow* window = nil;
+    for (ChromeWindow* candidate in [application windows]) {
+        if (!candidate.minimized && BrowserBoundsMatch(candidate.bounds, windowBounds)) {
+            window = candidate;
+            break;
+        }
+    }
+    if (!window) {
+        return NO;
+    }
+
+    ChromeTab* newTab = [[[application classForScriptingClass:@"tab"] alloc] init];
+    [window.tabs addObject:newTab];
+    window.activeTab.URL = url;
+    // `window` addresses its position in the front-to-back order. Raising it
+    // changes that order, so this must be the last use of `window`.
+    window.index = 1;
+
+    if (activate) {
+        [application activate];
+    }
+    return YES;
+}
+
+- (void)openURL:(NSString*) url inNewWindowCenteredIn:(NSRect) area andActivate:(BOOL) activate {
+    NSParameterAssert(url);
+    ChromeApplication* application = self.application;
+
+    ChromeWindow* newWindow = [[[application classForScriptingClass:@"window"] alloc] init];
+    [[application windows] addObject:newWindow];
+    newWindow.bounds = BrowserCenteredBounds(newWindow.bounds, area);
+    newWindow.activeTab.URL = url;
+
+    if (activate) {
+        [application activate];
+    }
 }
 
 @end
