@@ -89,20 +89,41 @@ class BrowserManager {
     }
 
     func openURL(url: String) {
-        let pid = NSRunningApplication.runningApplications(withBundleIdentifier: defaults.targetBrowserBundleIdentifier!).first?.processIdentifier
-        let browser = supportedBrowsers[defaults.targetBrowserBundleIdentifier!]
+        guard let bundleIdentifier = defaults.targetBrowserBundleIdentifier,
+              let browser = supportedBrowsers[bundleIdentifier] else {
+            NSLog("No supported target browser is selected")
+            return
+        }
 
         defer { defaults.timeOfLastActivation = Date() }
 
-        let hasWindowInCurrentSpace = pid.map { AXUIElementCreateApplication($0).hasWindowInCurrentSpace }
-        switch hasWindowInCurrentSpace {
-        case true?:
-            browser?.openURL(url, in: .newTab, andActivate: shouldActivate)
-        case false?:
-            browser?.openURL(url, in: .newWindow, andActivate: shouldActivate)
-        default:
-            browser?.openURL(url, in: .default)
+        // A browser that is not running has no windows to route to. Let it
+        // launch and open the link its own way.
+        guard let pid = NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).first?.processIdentifier else {
+            browser.openURL(url)
+            return
         }
+
+        let layout = DisplayLayout()
+        guard let display = layout.displayUnderCursor else {
+            browser.openURL(url)
+            return
+        }
+
+        // Windows on an active Space, narrowed to the cursor's display. The
+        // browser matches these frames against its own window list, which is
+        // ordered front to back, so the frontmost one on that display wins.
+        let windowBounds = AXUIElementCreateApplication(pid).visibleStandardWindows
+            .compactMap { $0.frame }
+            .filter { layout.display(holdingMostOf: $0) == display }
+            .map { NSValue(rect: $0) }
+
+        let activate = shouldActivate
+        if !windowBounds.isEmpty,
+           browser.openURL(url, inNewTabOfWindowWithBounds: windowBounds, andActivate: activate) {
+            return
+        }
+        browser.openURL(url, inNewWindowCenteredIn: display.visibleFrame, andActivate: activate)
     }
 
     private var shouldActivate: Bool {

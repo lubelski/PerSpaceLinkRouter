@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		495863E91D56462A008DD607 /* AXUIElementExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 495863E81D56462A008DD607 /* AXUIElementExtensions.swift */; };
+		49D15B1A2E50000100000012 /* Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49D15B1A2E50000100000011 /* Display.swift */; };
 		4964FFA21D566625002AE5FC /* UserDefaultsExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4964FFA11D566625002AE5FC /* UserDefaultsExtensions.swift */; };
 		498763F01D4D84E9001A6121 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 498763EF1D4D84E9001A6121 /* AppDelegate.swift */; };
 		498763F21D4D84E9001A6121 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 498763F11D4D84E9001A6121 /* Assets.xcassets */; };
@@ -21,6 +22,7 @@
 
 /* Begin PBXFileReference section */
 		495863E81D56462A008DD607 /* AXUIElementExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AXUIElementExtensions.swift; sourceTree = "<group>"; };
+		49D15B1A2E50000100000011 /* Display.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Display.swift; sourceTree = "<group>"; };
 		4964FFA11D566625002AE5FC /* UserDefaultsExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserDefaultsExtensions.swift; sourceTree = "<group>"; };
 		498763EC1D4D84E9001A6121 /* PerSpaceLinkRouter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PerSpaceLinkRouter.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		498763EF1D4D84E9001A6121 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -78,6 +80,7 @@
 				498763EF1D4D84E9001A6121 /* AppDelegate.swift */,
 				49C0FFEE2E50000100000001 /* SettingsView.swift */,
 				495863E81D56462A008DD607 /* AXUIElementExtensions.swift */,
+				49D15B1A2E50000100000011 /* Display.swift */,
 				49895C131D5F9CD500A7B5D5 /* BrowserManager.swift */,
 				4964FFA11D566625002AE5FC /* UserDefaultsExtensions.swift */,
 				49895C081D5F9C6D00A7B5D5 /* Browsers */,
@@ -205,6 +208,7 @@
 				49895C141D5F9CD500A7B5D5 /* BrowserManager.swift in Sources */,
 				49895C121D5F9C6D00A7B5D5 /* Safari.m in Sources */,
 				495863E91D56462A008DD607 /* AXUIElementExtensions.swift in Sources */,
+				49D15B1A2E50000100000012 /* Display.swift in Sources */,
 				49B781B81DE8D00900A0875F /* SafariTechnologyPreview.m in Sources */,
 				49895C111D5F9C6D00A7B5D5 /* Chrome.m in Sources */,
 				4964FFA21D566625002AE5FC /* UserDefaultsExtensions.swift in Sources */,

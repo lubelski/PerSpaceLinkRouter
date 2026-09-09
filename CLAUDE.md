@@ -1,7 +1,8 @@
 # PerSpaceLinkRouter
 
 macOS AppKit app (Swift 5 plus Objective-C ScriptingBridge wrappers) that opens
-web links in a browser window in the current Space. Derived from OpenHere by
+web links in a browser window in the current Space of the display under the
+mouse cursor. Derived from OpenHere by
 Marc Schwieterman (GPL). `origin` is github.com/lubelski/PerSpaceLinkRouter and
 `master` is the mainline.
 

@@ -1,7 +1,7 @@
 # PerSpaceLinkRouter
 
-`PerSpaceLinkRouter` opens web links in the current Space. It requires macOS 13 or
-later and builds natively for Apple Silicon.
+`PerSpaceLinkRouter` opens web links in the current Space, on the display under
+your cursor. It requires macOS 13 or later and builds natively for Apple Silicon.
 
 Do you use Spaces/Mission Control on your Mac?
 
@@ -14,10 +14,11 @@ Me too.
 ## How It Works
 
 `PerSpaceLinkRouter` is set as the default web browser, so it receives any links that
-are opened. When links are opened, `PerSpaceLinkRouter` uses the Accessibility APIs to
-see if there is a browser window in the current Space. If there isn't, it will
-open a new browser window. The link is then opened in a new tab in your chosen
-browser. Browser interaction uses the AppleScript scripting bridge.
+are opened. When a link is opened, `PerSpaceLinkRouter` finds the display under the
+mouse cursor and uses the Accessibility APIs to see if there is a browser window
+in that display's current Space. If there is, the link opens in a new tab of the
+frontmost such window. If there isn't, it opens a new browser window centered on
+that display. Browser interaction uses the AppleScript scripting bridge.
 
 ## Installation
 
