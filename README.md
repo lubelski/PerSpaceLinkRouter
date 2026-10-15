@@ -53,8 +53,9 @@ You should now be able to open links as you do normally, and they should always
 open in the current Space.
 
 `PerSpaceLinkRouter` stays running as a menu bar agent. To change which browser it
-forwards links to, or to toggle the Dock icon and start at login, click the
-menu bar icon and choose `Settings…`.
+forwards links to, click the menu bar icon and choose a browser from `Open Links
+With`. A checkmark identifies the saved selection. You can also choose a browser
+in `Settings…`, where you can toggle the Dock icon and start at login.
 
 ![Menu bar icon](/images/menubar.png)
 

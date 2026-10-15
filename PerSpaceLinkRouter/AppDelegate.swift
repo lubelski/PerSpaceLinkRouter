@@ -10,7 +10,7 @@ import Cocoa
 import SwiftUI
 
 @main
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private let defaults = UserDefaults.standard
     private let browserManager = BrowserManager()
@@ -59,6 +59,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
         item.button?.toolTip = "PerSpaceLinkRouter"
         let menu = NSMenu()
+        let browserItem = NSMenuItem(title: "Open Links With", action: nil, keyEquivalent: "")
+        let browserMenu = NSMenu(title: browserItem.title)
+        browserMenu.delegate = self
+        browserItem.submenu = browserMenu
+        menu.addItem(browserItem)
+        menu.addItem(.separator())
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettingsFromMenu(_:)), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -66,6 +72,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "Quit PerSpaceLinkRouter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
         item.menu = menu
         statusItem = item
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        // Read the saved selection each time, including changes made in Settings.
+        menu.removeAllItems()
+        for browser in browserManager.browserDescriptions {
+            let item = NSMenuItem(title: browser.name, action: #selector(selectBrowserFromMenu(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = browser.bundleIdentifier
+            item.state = defaults.targetBrowserBundleIdentifier == browser.bundleIdentifier ? .on : .off
+            let icon = browser.image.copy() as? NSImage
+            icon?.size = NSSize(width: 16, height: 16)
+            item.image = icon
+            menu.addItem(item)
+        }
+        if menu.items.isEmpty {
+            let item = NSMenuItem(title: "No Supported Browsers Installed", action: nil, keyEquivalent: "")
+            item.isEnabled = false
+            menu.addItem(item)
+        }
+    }
+
+    @objc private func selectBrowserFromMenu(_ sender: NSMenuItem) {
+        guard let bundleIdentifier = sender.representedObject as? String else { return }
+        browserManager.setTargetBrowser(bundleIdentifier: bundleIdentifier)
+        settingsModel?.refresh()
     }
 
     @objc private func showSettingsFromMenu(_ sender: NSMenuItem) {
