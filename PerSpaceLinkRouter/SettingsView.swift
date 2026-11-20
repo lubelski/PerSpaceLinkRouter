@@ -133,6 +133,7 @@ class SettingsModel: ObservableObject {
 struct SettingsView: View {
 
     @ObservedObject var model: SettingsModel
+    @ObservedObject var updater: AppUpdater
 
     var body: some View {
         Form {
@@ -187,6 +188,19 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            if updater.isAvailable {
+                Section {
+                    Toggle("Install updates automatically", isOn: Binding(
+                        get: { updater.updatesAutomatically },
+                        set: { updater.updatesAutomatically = $0 }))
+                    LabeledContent("Version \(appVersion)") {
+                        Button("Check for Updates…") {
+                            updater.checkForUpdates()
+                        }
+                        .disabled(!updater.canCheck)
+                    }
+                }
+            }
         }
         .formStyle(.grouped)
         .frame(width: 420)
@@ -226,6 +240,10 @@ struct SettingsView: View {
     private func statusText(_ text: String) -> some View {
         Text(text)
             .foregroundStyle(.secondary)
+    }
+
+    private var appVersion: String {
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 
     private var browserSelection: Binding<String> {

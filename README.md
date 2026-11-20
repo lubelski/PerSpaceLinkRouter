@@ -46,6 +46,7 @@ grants survive rebuilds. See CLAUDE.md for the trade-off.
 * Menu bar icon with access to settings
 * Optional hidden Dock icon
 * Optional start at login
+* Release builds update themselves
 
 ## Usage
 
@@ -67,6 +68,16 @@ again. Reopening a running instance always shows the settings window.
 If you decide `PerSpaceLinkRouter` isn't for you, you can restore your preferred
 default browser by selecting it in `System Settings` > `Desktop & Dock` >
 `Default web browser`.
+
+## Updates
+
+A build from the releases page updates itself with
+[Sparkle](https://sparkle-project.org). It checks the feed on GitHub about once
+a day, downloads a newer build, verifies its signature, and relaunches into it.
+`Settings…` has a checkbox that turns this off, and the menu has `Check for
+Updates…`.
+
+A build you make yourself with Xcode has no feed and never updates itself.
 
 ## Supported Browsers
 
@@ -90,7 +101,9 @@ browser-specific handling for [Chrome](/PerSpaceLinkRouter/Browsers/Chrome.m),
 [Safari](/PerSpaceLinkRouter/Browsers/Safari.m) and [Safari Technology
 Preview](/PerSpaceLinkRouter/Browsers/SafariTechnologyPreview.m).
 
-`PerSpaceLinkRouter` uses no third party frameworks.
+Sparkle is the only third party framework. A release build uses it to fetch
+the update feed and new builds from GitHub, and it sends nothing about you or
+your links.
 
 ## License
 

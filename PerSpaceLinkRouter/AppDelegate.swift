@@ -14,6 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private let defaults = UserDefaults.standard
     private let browserManager = BrowserManager()
+    private let updater = AppUpdater()
 
     private var launchedToOpenURL = false
     private var statusItem: NSStatusItem?
@@ -33,10 +34,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         applyActivationPolicy()
         setUpStatusItem()
         _ = browserManager.isAccessibilityEnabled
+        let relaunchedAfterUpdate = defaults.relaunchedAfterUpdate
+        defaults.relaunchedAfterUpdate = false
         // A URL launch or a hidden Dock icon means the app is running as a
         // background agent; only a direct launch with a visible Dock icon
-        // shows the window unprompted.
-        if !launchedToOpenURL && !defaults.hideDockIcon {
+        // shows the window unprompted. The relaunch after an update is not a
+        // direct launch.
+        if !launchedToOpenURL && !defaults.hideDockIcon && !relaunchedAfterUpdate {
             showSettings()
         }
     }
@@ -68,6 +72,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(showSettingsFromMenu(_:)), keyEquivalent: "")
         settingsItem.target = self
         menu.addItem(settingsItem)
+        if updater.isAvailable {
+            let updateItem = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdatesFromMenu(_:)), keyEquivalent: "")
+            updateItem.target = self
+            menu.addItem(updateItem)
+        }
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit PerSpaceLinkRouter", action: #selector(NSApplication.terminate(_:)), keyEquivalent: ""))
         item.menu = menu
@@ -104,6 +113,10 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         showSettings()
     }
 
+    @objc private func checkForUpdatesFromMenu(_ sender: NSMenuItem) {
+        updater.checkForUpdates()
+    }
+
     // MARK: - Settings window
 
     private func showSettings() {
@@ -124,7 +137,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         settingsModel = model
 
-        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model)))
+        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model, updater: updater)))
         window.styleMask = [.titled, .closable, .miniaturizable]
         window.title = "PerSpaceLinkRouter Settings"
         window.isReleasedWhenClosed = false

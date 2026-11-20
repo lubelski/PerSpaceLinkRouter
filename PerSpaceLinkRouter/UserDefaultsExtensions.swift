@@ -15,6 +15,7 @@ extension UserDefaults {
         static let timeOfLastActivation = "timeOfLastActivation"
         static let activationDelayInterval = "activationDelayInterval"
         static let hideDockIcon = "hideDockIcon"
+        static let relaunchedAfterUpdate = "relaunchedAfterUpdate"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -57,6 +58,17 @@ extension UserDefaults {
         }
         set {
             set(newValue, forKey: Keys.hideDockIcon)
+            synchronize()
+        }
+    }
+
+    /// Set just before the updater relaunches the app, and cleared at the next launch.
+    var relaunchedAfterUpdate: Bool {
+        get {
+            return bool(forKey: Keys.relaunchedAfterUpdate)
+        }
+        set {
+            set(newValue, forKey: Keys.relaunchedAfterUpdate)
             synchronize()
         }
     }

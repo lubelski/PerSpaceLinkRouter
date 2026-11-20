@@ -32,8 +32,21 @@ deployment target floor at macOS 13.
   CFBundleShortVersionString from the latest tag and CFBundleVersion from the
   commit count. The placeholder values in `PerSpaceLinkRouter/Info.plist` are not the
   real ones.
-- The app is ad-hoc signed with the hardened runtime and the
-  `com.apple.security.automation.apple-events` entitlement.
+- The app is ad-hoc signed with the hardened runtime and the entitlements in
+  `PerSpaceLinkRouter-AdHoc.entitlements`: `automation.apple-events` and
+  `cs.disable-library-validation`. Without the second one an ad-hoc build
+  can't load Sparkle.framework, because the hardened runtime only loads
+  libraries signed by the same team and an ad-hoc signature has no team.
+  Developer ID builds use `PerSpaceLinkRouter.entitlements`, which leaves it
+  out.
+- Sparkle comes in as a Swift package. The Sign Sparkle build phase signs the
+  framework and its helpers again with the build's identity. Xcode applies
+  `OTHER_CODE_SIGN_FLAGS` to the embedded framework too, and the designated
+  requirement below breaks the framework's signature.
+- Only a build from `bin/release` updates itself. The script passes
+  `SPARKLE_FEED_URL` and `SPARKLE_PUBLIC_KEY` to the build, which writes them
+  into Info.plist. A plain build leaves both empty, and `AppUpdater` then
+  never starts Sparkle.
 - Ad-hoc signing normally keys TCC grants to the build's cdhash, so every
   rebuild would reset the Accessibility and Automation grants. To prevent
   that, `OTHER_CODE_SIGN_FLAGS` sets an explicit designated requirement,
@@ -49,8 +62,10 @@ deployment target floor at macOS 13.
 ## Releasing
 
 - `bin/release <version>` tags, builds, signs with Developer ID, notarizes,
-  staples, zips, pushes the tag, and creates the GitHub release with
-  generated notes. `bin/release --check` reports what is missing.
+  staples, zips, signs the update feed, pushes the tag, and creates the
+  GitHub release with generated notes. The release has the zip and
+  `appcast.xml`, the feed Sparkle reads from the latest release, so
+  publishing a release ships the update to installed copies. `bin/release --check` reports what is missing.
   `--dry-run` does everything except tag and publish; `--adhoc` ad-hoc
   signs and skips notarization (Gatekeeper blocks such builds on other
   Macs, so only use it until the certificate exists).
@@ -69,6 +84,12 @@ deployment target floor at macOS 13.
      notarytool:
      `xcrun notarytool store-credentials PerSpaceLinkRouter --apple-id <id> --team-id <TEAM>`.
   4. `gh auth login` if needed.
+  5. A Sparkle signing key in the Keychain, made with Sparkle's
+     `generate_keys`. Its public half is in `bin/sparkle-public-key.txt`. It
+     is the key AI Meter and Claude FM use. Back the private half up: without
+     it, installed copies can't be updated.
+- Sparkle compares `CFBundleVersion`, the commit count, so release from
+  `master` only.
 
 ## TODO
 

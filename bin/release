@@ -20,6 +20,15 @@
 #   PERSPACELINKROUTER_NOTARY_PROFILE  notarytool keychain profile name.
 #                               Default: PerSpaceLinkRouter. Create it once with
 #                               `xcrun notarytool store-credentials PerSpaceLinkRouter`.
+#   PERSPACELINKROUTER_SPARKLE_KEY_FILE  a file with the private Sparkle signing
+#                               key. Default: the key in the Keychain.
+#
+# The release has two files: the zipped app and appcast.xml, the feed that
+# Sparkle reads. Installed copies fetch the feed from the latest release, so
+# publishing the release is what ships the update. The feed is signed with the
+# private half of the key in bin/sparkle-public-key.txt. Create one with
+# Sparkle's generate_keys, which keeps the private half in the Keychain. Back
+# it up: without it, installed copies can't be updated.
 #
 # The Set Version build phase stamps CFBundleShortVersionString from the
 # newest tag, so the tag is created before the build and deleted if anything
@@ -30,6 +39,10 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
 notary_profile=${PERSPACELINKROUTER_NOTARY_PROFILE:-PerSpaceLinkRouter}
+repo_url=https://github.com/lubelski/PerSpaceLinkRouter
+public_key=$(cat "$root/bin/sparkle-public-key.txt" 2>/dev/null || true)
+# Outside build/release, so the build keeps the downloaded package between runs.
+packages_dir=$root/build/SourcePackages
 
 check_only=false
 adhoc=false
@@ -91,6 +104,13 @@ readiness() {
         echo "MISSING - run: xcrun notarytool store-credentials $notary_profile --apple-id <id> --team-id <TEAM>"; ok=false
     fi
 
+    printf '%-36s ' "Sparkle public key:"
+    if [[ -n "$public_key" ]]; then
+        echo "ok"
+    else
+        echo "MISSING - put it in bin/sparkle-public-key.txt"; ok=false
+    fi
+
     printf '%-36s ' "gh auth:"
     if gh auth status >/dev/null 2>&1; then
         echo "ok"
@@ -121,6 +141,8 @@ if ! $dry_run; then
     ! git ls-remote --exit-code --tags origin "$version" >/dev/null 2>&1 || fail "tag $version already exists on origin"
     gh auth status >/dev/null 2>&1 || fail "gh is not authenticated"
 fi
+
+[[ -n "$public_key" ]] || fail "no Sparkle public key in bin/sparkle-public-key.txt"
 
 identity=""
 if $adhoc; then
@@ -162,14 +184,28 @@ if [[ -n "$identity" ]]; then
     # requirement on its own. Existing TCC grants still match because they
     # were stored as `identifier "com.lubelski.PerSpaceLinkRouter"`, which any
     # signature of this bundle satisfies.
+    #
+    # The project's default entitlements turn library validation off, which an
+    # ad-hoc build needs to load Sparkle. A Developer ID build signs Sparkle
+    # with the same team and doesn't need that.
+    #
+    # Outside an archive, Xcode adds the get-task-allow entitlement, which
+    # notarization rejects. CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO leaves it out.
     sign_settings=(
         "CODE_SIGN_IDENTITY=$identity"
         "CODE_SIGN_STYLE=Manual"
         "OTHER_CODE_SIGN_FLAGS=--timestamp"
+        "CODE_SIGN_ENTITLEMENTS=PerSpaceLinkRouter/PerSpaceLinkRouter.entitlements"
+        "CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO"
     )
 fi
+# The feed address and public key go into Info.plist. A build without them,
+# such as a plain Xcode build, never updates itself.
 xcodebuild -project PerSpaceLinkRouter.xcodeproj -target PerSpaceLinkRouter -configuration Release \
-    SYMROOT="$build_dir" ${sign_settings[@]+"${sign_settings[@]}"} build \
+    -clonedSourcePackagesDirPath "$packages_dir" \
+    SYMROOT="$build_dir" ${sign_settings[@]+"${sign_settings[@]}"} \
+    "SPARKLE_FEED_URL=$repo_url/releases/latest/download/appcast.xml" \
+    "SPARKLE_PUBLIC_KEY=$public_key" build \
     | grep -E "error:|warning:|BUILD (SUCCEEDED|FAILED)" || true
 [[ -d "$app" ]] || fail "build did not produce $app"
 
@@ -187,7 +223,12 @@ codesign -d --requirements - "$app" 2>&1 | grep -E "^designated" || true
 
 # ---------------------------------------------------------------- notarize
 
-zip=$build_dir/PerSpaceLinkRouter-$zip_version.zip
+# The zip gets a folder of its own, because generate_appcast reads every
+# archive in the folder it is given.
+dist_dir=$build_dir/dist
+mkdir -p "$dist_dir"
+zip=$dist_dir/PerSpaceLinkRouter-$zip_version.zip
+appcast=$dist_dir/appcast.xml
 make_zip() { rm -f "$zip"; ditto -c -k --keepParent "$app" "$zip"; }
 
 if ! $adhoc; then
@@ -203,6 +244,17 @@ fi
 log "Packaging $(basename "$zip")"
 make_zip
 ls -lh "$zip"
+
+log "Signing the update feed"
+key_args=()
+if [[ -n "${PERSPACELINKROUTER_SPARKLE_KEY_FILE:-}" ]]; then
+    key_args=(--ed-key-file "$PERSPACELINKROUTER_SPARKLE_KEY_FILE")
+fi
+"$packages_dir/artifacts/sparkle/Sparkle/bin/generate_appcast" ${key_args[@]+"${key_args[@]}"} \
+    --download-url-prefix "$repo_url/releases/download/$zip_version/" \
+    --link "$repo_url" \
+    -o "$appcast" "$dist_dir"
+grep -q 'sparkle:edSignature=' "$appcast" || fail "the feed has no signature for the update"
 
 if $dry_run; then
     log "Dry run complete; nothing tagged or published"
@@ -220,5 +272,5 @@ notes_flags=(--generate-notes)
 if $adhoc; then
     notes_flags+=(--notes "Ad-hoc signed build: macOS will block it on first launch. Open System Settings > Privacy & Security and choose Open Anyway.")
 fi
-gh release create "$version" "$zip" --title "PerSpaceLinkRouter $version" --verify-tag "${notes_flags[@]}"
+gh release create "$version" "$zip" "$appcast" --title "PerSpaceLinkRouter $version" --verify-tag "${notes_flags[@]}"
 log "Done: $(gh release view "$version" --json url -q .url)"
