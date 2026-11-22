@@ -17,11 +17,34 @@
 #   PERSPACELINKROUTER_SIGN_IDENTITY   "Developer ID Application: ..." identity name
 #                               or SHA-1. Default: the first such identity in
 #                               the keychain.
-#   PERSPACELINKROUTER_NOTARY_PROFILE  notarytool keychain profile name.
+#   NOTARY_KEY_FILE, NOTARY_KEY_ID, NOTARY_ISSUER_ID
+#                               an App Store Connect API key: its .p8 file, key
+#                               ID, and issuer ID. Used when all three are set.
+#   NOTARY_CONF                 a file with the same three keys. Default:
+#                               ~/.appstoreconnect/notary.conf.
+#   PERSPACELINKROUTER_NOTARY_PROFILE  notarytool keychain profile name, used
+#                               when there is no API key.
 #                               Default: PerSpaceLinkRouter. Create it once with
 #                               `xcrun notarytool store-credentials PerSpaceLinkRouter`.
 #   PERSPACELINKROUTER_SPARKLE_KEY_FILE  a file with the private Sparkle signing
 #                               key. Default: the key in the Keychain.
+#
+# Notarization uses the first of these that is set up:
+#   1. NOTARY_KEY_FILE, NOTARY_KEY_ID, and NOTARY_ISSUER_ID in the environment.
+#   2. ~/.appstoreconnect/notary.conf, or the file NOTARY_CONF names, with
+#      three KEY=VALUE lines (mode 600):
+#        NOTARY_KEY_FILE=~/.appstoreconnect/private_keys/AuthKey_<key id>.p8
+#        NOTARY_KEY_ID=<key id>
+#        NOTARY_ISSUER_ID=<issuer id>
+#      The file is read, never run. Blank lines and # comments are ignored,
+#      and any other key is an error. A file that exists but is incomplete, or
+#      names a key file that is not there, stops the release instead of
+#      falling back.
+#   3. The notarytool keychain profile.
+# The API key, a team key from App Store Connect, Users and Access,
+# Integrations, is the way to release with the screen locked or with no one
+# at the Mac. The keychain profile works for a person at the Mac, but macOS
+# does not open it while the screen is locked.
 #
 # The release has two files: the zipped app and appcast.xml, the feed that
 # Sparkle reads. Installed copies fetch the feed from the latest release, so
@@ -39,6 +62,8 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/.." && pwd)
 export DEVELOPER_DIR=${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}
 notary_profile=${PERSPACELINKROUTER_NOTARY_PROFILE:-PerSpaceLinkRouter}
+notary_conf_default=$HOME/.appstoreconnect/notary.conf
+notary_conf=${NOTARY_CONF:-$notary_conf_default}
 repo_url=https://github.com/lubelski/PerSpaceLinkRouter
 public_key=$(cat "$root/bin/sparkle-public-key.txt" 2>/dev/null || true)
 # Outside build/release, so the build keeps the downloaded package between runs.
@@ -74,8 +99,84 @@ find_identity() {
         | sed -n 's/.*"\(Developer ID Application: [^"]*\)".*/\1/p' | head -1
 }
 
-have_notary_profile() {
-    xcrun notarytool history --keychain-profile "$notary_profile" >/dev/null 2>&1
+# Sets notary_args, the arguments every notarytool call gets, and
+# notary_method, which names the method for the log. On a problem it sets
+# notary_error and returns 1. Nothing it prints holds the key ID, the issuer
+# ID, or the key file's path.
+notary_args=()
+notary_method=""
+notary_uses_key=false
+notary_error=""
+notary_skip_line='^[[:space:]]*(#.*)?$'
+choose_notary_credentials() {
+    local key_file=${NOTARY_KEY_FILE:-} key_id=${NOTARY_KEY_ID:-} issuer=${NOTARY_ISSUER_ID:-}
+    local from line name value missing=""
+    # shellcheck disable=SC2088 # The tilde is text for messages, not a path.
+    local conf_name="~/.appstoreconnect/notary.conf"
+    [[ "$notary_conf" == "$notary_conf_default" ]] || conf_name="the file NOTARY_CONF names"
+
+    if [[ -n "$key_file" && -n "$key_id" && -n "$issuer" ]]; then
+        from="the environment"
+    elif [[ -e "$notary_conf" ]]; then
+        from=$conf_name
+        key_file="" key_id="" issuer=""
+        if [[ ! -f "$notary_conf" || ! -r "$notary_conf" ]]; then
+            notary_error="$conf_name is not a readable file"
+            return 1
+        fi
+        while IFS= read -r line || [[ -n "$line" ]]; do
+            line=${line%$'\r'}
+            [[ "$line" =~ $notary_skip_line ]] && continue
+            if [[ "$line" != *=* ]]; then
+                notary_error="$conf_name has a line that is not KEY=VALUE"
+                return 1
+            fi
+            name=${line%%=*}
+            name=${name#"${name%%[![:space:]]*}"}
+            name=${name%"${name##*[![:space:]]}"}
+            value=${line#*=}
+            value=${value#"${value%%[![:space:]]*}"}
+            value=${value%"${value##*[![:space:]]}"}
+            case "$name" in
+                NOTARY_KEY_FILE) key_file=$value ;;
+                NOTARY_KEY_ID) key_id=$value ;;
+                NOTARY_ISSUER_ID) issuer=$value ;;
+                *)
+                    notary_error="$conf_name sets $name. It may set only NOTARY_KEY_FILE, NOTARY_KEY_ID, and NOTARY_ISSUER_ID"
+                    return 1
+                    ;;
+            esac
+        done < "$notary_conf"
+        [[ -n "$key_file" ]] || missing="$missing NOTARY_KEY_FILE"
+        [[ -n "$key_id" ]] || missing="$missing NOTARY_KEY_ID"
+        [[ -n "$issuer" ]] || missing="$missing NOTARY_ISSUER_ID"
+        if [[ -n "$missing" ]]; then
+            notary_error="$conf_name is incomplete. It does not set:$missing"
+            return 1
+        fi
+    else
+        notary_args=(--keychain-profile "$notary_profile")
+        notary_method="the keychain profile '$notary_profile'"
+        notary_uses_key=false
+        return 0
+    fi
+
+    # shellcheck disable=SC2088 # A leading ~/ in the value is expanded here, by hand.
+    if [[ "$key_file" == "~/"* ]]; then
+        key_file=$HOME/${key_file#"~/"}
+    fi
+    if [[ ! -f "$key_file" || ! -r "$key_file" ]]; then
+        notary_error="NOTARY_KEY_FILE, from $from, names a key file that is missing or not a readable file"
+        return 1
+    fi
+    notary_args=(--key "$key_file" --key-id "$key_id" --issuer "$issuer")
+    notary_method="the App Store Connect API key from $from"
+    notary_uses_key=true
+}
+
+# A read-only call that proves the credentials work.
+notary_works() {
+    xcrun notarytool history "${notary_args[@]}" >/dev/null 2>&1
 }
 
 readiness() {
@@ -97,11 +198,15 @@ readiness() {
         echo "MISSING - create one in Xcode > Settings > Accounts > Manage Certificates"; ok=false
     fi
 
-    printf '%-36s ' "notarytool profile '$notary_profile':"
-    if have_notary_profile; then
-        echo "ok"
+    printf '%-36s ' "Notarization credentials:"
+    if ! choose_notary_credentials; then
+        echo "FAILED - $notary_error"; ok=false
+    elif notary_works; then
+        echo "ok, with $notary_method"
+    elif $notary_uses_key; then
+        echo "FAILED - notarytool history did not work with $notary_method"; ok=false
     else
-        echo "MISSING - run: xcrun notarytool store-credentials $notary_profile --apple-id <id> --team-id <TEAM>"; ok=false
+        echo "MISSING - set up an API key in ~/.appstoreconnect/notary.conf (see the top of bin/release), or run: xcrun notarytool store-credentials $notary_profile --apple-id <id> --team-id <TEAM>"; ok=false
     fi
 
     printf '%-36s ' "Sparkle public key:"
@@ -150,7 +255,12 @@ if $adhoc; then
 else
     identity=$(find_identity)
     [[ -n "$identity" ]] || fail "no Developer ID Application identity found (use --adhoc, or see bin/release --check)"
-    have_notary_profile || fail "notarytool profile '$notary_profile' not found (see bin/release --check)"
+    choose_notary_credentials || fail "$notary_error"
+    log "Notarizing with $notary_method"
+    if ! notary_works; then
+        $notary_uses_key && fail "notarytool history did not work with $notary_method (see bin/release --check)"
+        fail "notarytool profile '$notary_profile' not found (see bin/release --check)"
+    fi
 fi
 
 # ---------------------------------------------------------------------- tag
@@ -234,7 +344,7 @@ make_zip() { rm -f "$zip"; ditto -c -k --keepParent "$app" "$zip"; }
 if ! $adhoc; then
     log "Submitting to Apple notary service"
     make_zip
-    xcrun notarytool submit "$zip" --keychain-profile "$notary_profile" --wait
+    xcrun notarytool submit "$zip" "${notary_args[@]}" --wait
     log "Stapling ticket"
     xcrun stapler staple "$app"
     log "Gatekeeper assessment"
