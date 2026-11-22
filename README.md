@@ -69,6 +69,26 @@ If you decide `PerSpaceLinkRouter` isn't for you, you can restore your preferred
 default browser by selecting it in `System Settings` > `Desktop & Dock` >
 `Default web browser`.
 
+## App Links
+
+`PerSpaceLinkRouter` can open some links in their native app instead of the
+browser. Each app has a toggle in the `App Links` section of `Settings…`. All of
+them are off by default, and only apps you have installed are listed.
+
+* Figma: design, FigJam board, slides, prototype, and Make links
+* Zoom: meeting links (`zoom.us/j/…`, including company subdomains)
+* Slack: channel and DM links from the web client (`app.slack.com/client/…`)
+* Discord: channel and DM links (`discord.com/channels/…`)
+* Spotify: track, album, artist, playlist, show, and episode links
+
+Hold Option (⌥) while opening a link to send it to the browser anyway. A link
+that an app hands back to the browser itself, such as Figma's `Open in
+Browser`, also goes to the browser instead of looping back into the app.
+
+Known limitation: the per-Space routing only applies to browsers. An app link
+opens wherever the app puts it, which may be a window in another Space. macOS
+has no public API for moving another app's windows between Spaces.
+
 ## Updates
 
 A build from the releases page updates itself with
@@ -96,7 +116,9 @@ You can walk through the entire execution path from where the link open event
 is handled (`handleGetURLEvent` in
 [AppDelegate.swift](/PerSpaceLinkRouter/AppDelegate.swift)), to the general browser
 handling (`openURL` in
-[BrowserManager.swift](/PerSpaceLinkRouter/BrowserManager.swift)), to the
+[BrowserManager.swift](/PerSpaceLinkRouter/BrowserManager.swift)), to the app
+link rules ([AppLinkRouter.swift](/PerSpaceLinkRouter/AppLinkRouter.swift) and
+[AppLinkRule.swift](/PerSpaceLinkRouter/AppLinkRule.swift)), to the
 browser-specific handling for [Chrome](/PerSpaceLinkRouter/Browsers/Chrome.m),
 [Safari](/PerSpaceLinkRouter/Browsers/Safari.m) and [Safari Technology
 Preview](/PerSpaceLinkRouter/Browsers/SafariTechnologyPreview.m).

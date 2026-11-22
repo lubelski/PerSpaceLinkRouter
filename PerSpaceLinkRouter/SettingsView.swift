@@ -32,6 +32,7 @@ class SettingsModel: ObservableObject {
     @Published private(set) var hideDockIcon = false
     @Published private(set) var launchAtLogin = false
     @Published private(set) var activationDelay = 0
+    @Published private(set) var appLinkRules: [AppLinkRuleDescription] = []
 
     init(browserManager: BrowserManager) {
         self.browserManager = browserManager
@@ -53,6 +54,12 @@ class SettingsModel: ObservableObject {
         hideDockIcon = defaults.hideDockIcon
         launchAtLogin = SMAppService.mainApp.status == .enabled
         activationDelay = Int(defaults.activationDelayInterval)
+        appLinkRules = browserManager.appLinkRouter.installedRuleDescriptions
+    }
+
+    func setAppLinkRule(identifier: String, enabled: Bool) {
+        browserManager.appLinkRouter.setRule(identifier: identifier, enabled: enabled)
+        appLinkRules = browserManager.appLinkRouter.installedRuleDescriptions
     }
 
     func setTargetBrowser(bundleIdentifier: String) {
@@ -188,6 +195,25 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            Section {
+                if model.appLinkRules.isEmpty {
+                    statusText("No supported apps installed")
+                }
+                ForEach(model.appLinkRules, id: \.rule.id) { description in
+                    Toggle(isOn: appLinkRuleBinding(description.rule.id)) {
+                        HStack {
+                            Image(nsImage: icon(for: description.image))
+                            Text(description.rule.name)
+                        }
+                    }
+                }
+            } header: {
+                Text("App Links")
+            } footer: {
+                Text("Matching links open in the app instead of the browser. Hold ⌥ while opening a link to use the browser.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
             if updater.isAvailable {
                 Section {
                     Toggle("Install updates automatically", isOn: Binding(
@@ -258,8 +284,18 @@ struct SettingsView: View {
             set: { model.setActivationDelay($0) })
     }
 
+    private func appLinkRuleBinding(_ identifier: String) -> Binding<Bool> {
+        Binding(
+            get: { model.appLinkRules.first { $0.rule.id == identifier }?.rule.isEnabled ?? false },
+            set: { model.setAppLinkRule(identifier: identifier, enabled: $0) })
+    }
+
     private func icon(for browser: BrowserDescription) -> NSImage {
-        let icon = browser.image.copy() as! NSImage
+        return icon(for: browser.image)
+    }
+
+    private func icon(for image: NSImage) -> NSImage {
+        let icon = image.copy() as! NSImage
         icon.size = NSSize(width: 16, height: 16)
         return icon
     }
