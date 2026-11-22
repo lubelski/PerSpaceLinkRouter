@@ -88,7 +88,28 @@ class BrowserManager {
         defaults.targetBrowserBundleIdentifier = bundleIdentifier
     }
 
-    func openURL(url: String) {
+    let appLinkRouter = AppLinkRouter()
+
+    /// The single entry point for every link. `sourceBundleIdentifier` is the
+    /// app that sent it, when known; see AppLinkRouter for how it is used.
+    func openURL(url: String, sourceBundleIdentifier: String? = nil) {
+        // App link rules come first. With no enabled rule matching, this
+        // falls straight through to the unchanged browser path.
+        if let destination = appLinkRouter.destination(for: url, sourceBundleIdentifier: sourceBundleIdentifier) {
+            let activate = shouldActivate
+            defaults.timeOfLastActivation = Date()
+            appLinkRouter.open(destination, activate: activate) { [weak self] opened in
+                // If the app refuses the link, the browser still gets it.
+                if !opened {
+                    self?.openInBrowser(url: url)
+                }
+            }
+            return
+        }
+        openInBrowser(url: url)
+    }
+
+    private func openInBrowser(url: String) {
         guard let bundleIdentifier = defaults.targetBrowserBundleIdentifier,
               let browser = supportedBrowsers[bundleIdentifier] else {
             NSLog("No supported target browser is selected")

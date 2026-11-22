@@ -154,8 +154,18 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func handleGetURLEvent(event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         launchedToOpenURL = true
         if let urlAsString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue {
-            browserManager.openURL(url: urlAsString)
+            browserManager.openURL(url: urlAsString, sourceBundleIdentifier: senderBundleIdentifier(of: event))
         }
+    }
+
+    // The app that sent the event, so a link an app hands back to the
+    // browser is not routed into that same app again.
+    private func senderBundleIdentifier(of event: NSAppleEventDescriptor) -> String? {
+        guard let pid = event.attributeDescriptor(forKeyword: AEKeyword(keySenderPIDAttr))?.int32Value,
+              pid > 0 else {
+            return nil
+        }
+        return NSRunningApplication(processIdentifier: pid)?.bundleIdentifier
     }
 
     // Local HTML files opened via Finder ("Open With") arrive here rather

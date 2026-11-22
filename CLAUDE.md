@@ -12,6 +12,25 @@ settings window is built programmatically in AppDelegate; MainMenu.xib holds
 only the main menu. Launch at login uses `SMAppService`, which sets the
 deployment target floor at macOS 13.
 
+## App Link Rules
+
+- `BrowserManager.openURL` is the single entry point for links. It asks
+  `AppLinkRouter` first; with no enabled rule matching, it falls through to
+  the browser path unchanged.
+- The catalog lives in code (`AppLinkCatalog` in `AppLinkRule.swift`). Only
+  the set of enabled rule ids is stored in UserDefaults. Rule ids are
+  persisted, so never rename one.
+- `AppLinkRule.swift` imports only Foundation so `bin/check-app-link-rules`
+  can compile it alone. Run that script after changing a pattern or rewrite,
+  and add cases for the change.
+- Before adding a rule, check how the app's URL handler parses what it gets.
+  Electron apps keep their handler in `Contents/Resources/app.asar` (or a
+  downloaded module), which `strings` can search for `open-url`. Figma only
+  accepts https URLs whose host is exactly `www.figma.com`; Discord only
+  accepts the `discord:` scheme and routes on the path.
+- Never log URLs or matched text. Errors from `NSWorkspace.open` can carry
+  the URL, so log the domain and code only.
+
 ## Agent Workflow
 
 - Work in a new git worktree on a branch. Never commit directly to `master`.

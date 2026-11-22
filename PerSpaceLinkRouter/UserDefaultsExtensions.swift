@@ -16,6 +16,7 @@ extension UserDefaults {
         static let activationDelayInterval = "activationDelayInterval"
         static let hideDockIcon = "hideDockIcon"
         static let relaunchedAfterUpdate = "relaunchedAfterUpdate"
+        static let enabledAppLinkRuleIdentifiers = "enabledAppLinkRuleIdentifiers"
     }
 
     private static let defaultValues: [String: Any] = [
@@ -69,6 +70,19 @@ extension UserDefaults {
         }
         set {
             set(newValue, forKey: Keys.relaunchedAfterUpdate)
+            synchronize()
+        }
+    }
+
+    // Only user state is stored: which catalog rules are on. The rules
+    // themselves live in code (AppLinkCatalog). Custom rules, if added later,
+    // belong under their own key.
+    var enabledAppLinkRuleIdentifiers: Set<String> {
+        get {
+            return Set(stringArray(forKey: Keys.enabledAppLinkRuleIdentifiers) ?? [])
+        }
+        set {
+            set(newValue.sorted(), forKey: Keys.enabledAppLinkRuleIdentifiers)
             synchronize()
         }
     }
