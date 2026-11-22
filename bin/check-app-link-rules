@@ -1,0 +1,15 @@
+#!/bin/sh
+# Checks the app link catalog's patterns and rewrites against sample URLs.
+# Usage: bin/check-app-link-rules
+set -eu
+root=$(cd "$(dirname "$0")/.." && pwd)
+build=$(mktemp -d)
+trap 'rm -rf "$build"' EXIT
+: "${DEVELOPER_DIR:=/Applications/Xcode.app/Contents/Developer}"
+export DEVELOPER_DIR
+# Top-level statements are only allowed in a file named main.swift.
+cp "$root/bin/check-app-link-rules.swift" "$build/main.swift"
+xcrun swiftc -o "$build/check" \
+    "$root/PerSpaceLinkRouter/AppLinkRule.swift" \
+    "$build/main.swift"
+"$build/check"
