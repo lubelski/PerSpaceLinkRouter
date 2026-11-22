@@ -99,9 +99,17 @@ deployment target floor at macOS 13.
   2. Xcode > Settings > Accounts > Manage Certificates > + > Developer ID
      Application. `security find-identity -v -p codesigning` should then
      list it.
-  3. An app-specific password from account.apple.com, stored for
-     notarytool:
-     `xcrun notarytool store-credentials PerSpaceLinkRouter --apple-id <id> --team-id <TEAM>`.
+  3. Notarization credentials, one of:
+     - An App Store Connect API key, in `NOTARY_KEY_FILE`, `NOTARY_KEY_ID`,
+       and `NOTARY_ISSUER_ID`, or in `~/.appstoreconnect/notary.conf` as
+       three `KEY=VALUE` lines. This is the way to release with the screen
+       locked or with no one at the Mac. The top of `bin/release` has the
+       details.
+     - An app-specific password from account.apple.com, stored for
+       notarytool:
+       `xcrun notarytool store-credentials PerSpaceLinkRouter --apple-id <id> --team-id <TEAM>`.
+       It works for a person at the Mac. macOS does not open it while the
+       screen is locked.
   4. `gh auth login` if needed.
   5. A Sparkle signing key in the Keychain, made with Sparkle's
      `generate_keys`. Its public half is in `bin/sparkle-public-key.txt`. It
