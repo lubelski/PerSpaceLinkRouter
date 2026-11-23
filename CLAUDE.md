@@ -10,8 +10,9 @@ The app runs as a resident menu bar agent. `LSUIElement` is set in Info.plist,
 and the Dock icon is a runtime toggle via `NSApp.setActivationPolicy`. The
 settings window is a SwiftUI sidebar and pages hosted in an AppKit window
 (`SettingsWindow.swift`, with the pages in `SettingsView.swift` and
-`AppLinksSettingsView.swift`); MainMenu.xib holds only the main menu. Launch at login uses `SMAppService`, which sets the
-deployment target floor at macOS 13.
+`AppLinksSettingsView.swift`); MainMenu.xib holds only the main menu. Launch
+at login uses `SMAppService`, which sets the deployment target floor at
+macOS 13.
 
 ## App Link Rules
 
