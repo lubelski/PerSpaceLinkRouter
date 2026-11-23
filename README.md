@@ -55,8 +55,18 @@ open in the current Space.
 
 `PerSpaceLinkRouter` stays running as a menu bar agent. To change which browser it
 forwards links to, click the menu bar icon and choose a browser from `Open Links
-With`. A checkmark identifies the saved selection. You can also choose a browser
-in `Settings…`, where you can toggle the Dock icon and start at login.
+With`. A checkmark identifies the saved selection.
+
+`Settings…` opens a window with a sidebar of four pages:
+
+* General: the browser to open links with, setting the default browser, the
+  activation delay, the Dock icon, and start at login
+* App Links: which apps open their own links (see below)
+* Permissions: the Accessibility and Automation grants, what each is for, and
+  a button to System Settings when one is missing
+* Updates: automatic updates, the version, and `Check for Updates…`
+
+The window reopens on the page you last had open.
 
 ![Menu bar icon](/images/menubar.png)
 
@@ -72,7 +82,7 @@ default browser by selecting it in `System Settings` > `Desktop & Dock` >
 ## App Links
 
 `PerSpaceLinkRouter` can open some links in their native app instead of the
-browser. Each app has a toggle in the `App Links` section of `Settings…`. All of
+browser. Each app has a toggle on the `App Links` page of `Settings…`. All of
 them are off by default, and only apps you have installed are listed.
 
 * Figma: design, FigJam board, slides, prototype, and Make links
@@ -94,8 +104,8 @@ has no public API for moving another app's windows between Spaces.
 A build from the releases page updates itself with
 [Sparkle](https://sparkle-project.org). It checks the feed on GitHub about once
 a day, downloads a newer build, verifies its signature, and relaunches into it.
-`Settings…` has a checkbox that turns this off, and the menu has `Check for
-Updates…`.
+The `Updates` page of `Settings…` has a switch that turns this off, and the
+menu has `Check for Updates…`.
 
 A build you make yourself with Xcode has no feed and never updates itself.
 

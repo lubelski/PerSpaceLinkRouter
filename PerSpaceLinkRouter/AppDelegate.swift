@@ -18,7 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var launchedToOpenURL = false
     private var statusItem: NSStatusItem?
-    private var settingsWindow: NSWindow?
+    private var settingsWindowController: SettingsWindowController?
     private var settingsModel: SettingsModel?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -120,29 +120,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Settings window
 
     private func showSettings() {
-        let window = settingsWindow ?? makeSettingsWindow()
-        settingsWindow = window
+        let controller = settingsWindowController ?? makeSettingsWindowController()
+        settingsWindowController = controller
         settingsModel?.refresh()
         NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(self)
+        controller.window?.makeKeyAndOrderFront(self)
     }
 
-    private func makeSettingsWindow() -> NSWindow {
+    private func makeSettingsWindowController() -> SettingsWindowController {
         let model = SettingsModel(browserManager: browserManager)
         model.onHideDockIconChange = { [weak self] in
             self?.applyActivationPolicy()
             // The policy switch can drop the app out of focus; bring the window back.
             NSApp.activate(ignoringOtherApps: true)
-            self?.settingsWindow?.makeKeyAndOrderFront(self)
+            self?.settingsWindowController?.window?.makeKeyAndOrderFront(self)
         }
         settingsModel = model
-
-        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model, updater: updater)))
-        window.styleMask = [.titled, .closable, .miniaturizable]
-        window.title = "PerSpaceLinkRouter Settings"
-        window.isReleasedWhenClosed = false
-        window.center()
-        return window
+        return SettingsWindowController(model: model, updater: updater)
     }
 
     private func applyActivationPolicy() {
