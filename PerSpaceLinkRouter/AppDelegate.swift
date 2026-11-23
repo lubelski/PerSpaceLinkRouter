@@ -21,6 +21,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var settingsWindowController: SettingsWindowController?
     private var settingsModel: SettingsModel?
 
+    /// The process entry point. `app-links` commands are answered here and
+    /// exit before `NSApplicationMain` creates the app, this delegate, or
+    /// anything it owns. Any other launch, including macOS's own arguments
+    /// (`-psn_...`, `-NS...` defaults), goes straight to the normal launch.
+    static func main() {
+        if let status = AppLinksCommand.run(arguments: CommandLine.arguments) {
+            exit(status)
+        }
+        _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+    }
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         defaults.registerDefaultVales()
         NSAppleEventManager.shared().setEventHandler(
@@ -33,6 +44,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyActivationPolicy()
         setUpStatusItem()
+        browserManager.appLinkRouter.store.startWatching()
         _ = browserManager.isAccessibilityEnabled
         let relaunchedAfterUpdate = defaults.relaunchedAfterUpdate
         defaults.relaunchedAfterUpdate = false

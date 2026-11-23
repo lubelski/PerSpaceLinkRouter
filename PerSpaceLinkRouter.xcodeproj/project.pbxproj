@@ -24,6 +24,9 @@
 		49C0FFEE2E50000100000006 /* AppLinksSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C0FFEE2E50000100000005 /* AppLinksSettingsView.swift */; };
 		49A11C1E2E60000100000004 /* AppLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000003 /* AppLinkRouter.swift */; };
 		49A11C1E2E60000100000002 /* AppLinkRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000001 /* AppLinkRule.swift */; };
+		49A11C1E2E60000100000006 /* AppLinkConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000005 /* AppLinkConfig.swift */; };
+		49A11C1E2E60000100000008 /* AppLinkConfigStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000007 /* AppLinkConfigStore.swift */; };
+		49A11C1E2E6000010000000A /* AppLinksCommand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000009 /* AppLinksCommand.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,6 +58,9 @@
 		49C0FFEE2E50000100000005 /* AppLinksSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinksSettingsView.swift; sourceTree = "<group>"; };
 		49A11C1E2E60000100000003 /* AppLinkRouter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkRouter.swift; sourceTree = "<group>"; };
 		49A11C1E2E60000100000001 /* AppLinkRule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkRule.swift; sourceTree = "<group>"; };
+		49A11C1E2E60000100000005 /* AppLinkConfig.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkConfig.swift; sourceTree = "<group>"; };
+		49A11C1E2E60000100000007 /* AppLinkConfigStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkConfigStore.swift; sourceTree = "<group>"; };
+		49A11C1E2E60000100000009 /* AppLinksCommand.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinksCommand.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,6 +106,9 @@
 				49A0E0012F00000100000001 /* AppUpdater.swift */,
 				49A11C1E2E60000100000003 /* AppLinkRouter.swift */,
 				49A11C1E2E60000100000001 /* AppLinkRule.swift */,
+				49A11C1E2E60000100000005 /* AppLinkConfig.swift */,
+				49A11C1E2E60000100000007 /* AppLinkConfigStore.swift */,
+				49A11C1E2E60000100000009 /* AppLinksCommand.swift */,
 				495863E81D56462A008DD607 /* AXUIElementExtensions.swift */,
 				49D15B1A2E50000100000011 /* Display.swift */,
 				49895C131D5F9CD500A7B5D5 /* BrowserManager.swift */,
@@ -262,6 +271,9 @@
 				49A0E0012F00000100000002 /* AppUpdater.swift in Sources */,
 				49A11C1E2E60000100000004 /* AppLinkRouter.swift in Sources */,
 				49A11C1E2E60000100000002 /* AppLinkRule.swift in Sources */,
+				49A11C1E2E60000100000006 /* AppLinkConfig.swift in Sources */,
+				49A11C1E2E60000100000008 /* AppLinkConfigStore.swift in Sources */,
+				49A11C1E2E6000010000000A /* AppLinksCommand.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
