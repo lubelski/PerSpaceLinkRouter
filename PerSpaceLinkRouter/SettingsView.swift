@@ -33,9 +33,27 @@ class SettingsModel: ObservableObject {
     @Published private(set) var launchAtLogin = false
     @Published private(set) var activationDelay = 0
     @Published private(set) var appLinkRules: [AppLinkRuleDescription] = []
+    /// Why app-links.json is not in effect, if it isn't.
+    @Published private(set) var appLinkIssues: [AppLinkConfigIssue] = []
+    /// The last failed write of app-links.json from the window.
+    @Published var appLinkSaveError: String?
+
+    private var appLinkObserver: NSObjectProtocol?
 
     init(browserManager: BrowserManager) {
         self.browserManager = browserManager
+        appLinkObserver = NotificationCenter.default.addObserver(
+            forName: AppLinkConfigStore.didChangeNotification,
+            object: browserManager.appLinkRouter.store,
+            queue: .main) { [weak self] _ in
+                self?.refreshAppLinks()
+        }
+    }
+
+    deinit {
+        if let observer = appLinkObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     var targetBrowserName: String {
@@ -54,12 +72,18 @@ class SettingsModel: ObservableObject {
         hideDockIcon = defaults.hideDockIcon
         launchAtLogin = SMAppService.mainApp.status == .enabled
         activationDelay = Int(defaults.activationDelayInterval)
-        appLinkRules = browserManager.appLinkRouter.installedRuleDescriptions
+        refreshAppLinks()
     }
 
-    func setAppLinkRule(identifier: String, enabled: Bool) {
-        browserManager.appLinkRouter.setRule(identifier: identifier, enabled: enabled)
-        appLinkRules = browserManager.appLinkRouter.installedRuleDescriptions
+    /// App link actions are in AppLinksSettingsView.swift.
+    func refreshAppLinks() {
+        let router = browserManager.appLinkRouter
+        appLinkRules = router.ruleDescriptions
+        appLinkIssues = router.store.issues
+    }
+
+    var appLinkRouter: AppLinkRouter {
+        return browserManager.appLinkRouter
     }
 
     func setTargetBrowser(bundleIdentifier: String) {

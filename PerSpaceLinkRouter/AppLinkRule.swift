@@ -153,13 +153,59 @@ enum AppLinkCatalog {
             isEnabled: false),
     ]
 
-    /// The catalog with the user's enabled set applied.
-    static func rules(enabledIdentifiers: Set<String>) -> [AppLinkRule] {
-        return rules.map { rule in
-            var rule = rule
-            rule.isEnabled = enabledIdentifiers.contains(rule.id)
-            return rule
+    /// One line per built-in rule for the settings window, describing what
+    /// its pattern matches.
+    static let summaries: [String: String] = [
+        "figma": "Design, board, slides, prototype, and Make links",
+        "zoom": "Meeting links, including company subdomains",
+        "slack": "Channel and DM links from app.slack.com",
+        "discord": "Channel and DM links from discord.com",
+        "spotify": "Track, album, artist, playlist, show, and episode links",
+    ]
+
+    static let identifiers: Set<String> = Set(rules.map(\.id))
+
+    static func isBuiltIn(_ identifier: String) -> Bool {
+        return identifiers.contains(identifier)
+    }
+
+    /// A one-line description of what a rule matches: the built-in summary,
+    /// or for a custom rule the host its pattern names, or else the pattern.
+    static func summary(for rule: AppLinkRule) -> String {
+        if isBuiltIn(rule.id), let summary = summaries[rule.id] {
+            return summary
         }
+        if let host = host(inPattern: rule.pattern) {
+            return "Links from \(host)"
+        }
+        return rule.pattern
+    }
+
+    /// The literal host in a pattern such as `^https://example\.com/(.+)$`,
+    /// or nil when the host part uses regular expression syntax.
+    static func host(inPattern pattern: String) -> String? {
+        guard let schemeEnd = pattern.range(of: "://") else {
+            return nil
+        }
+        var host = ""
+        var characters = pattern[schemeEnd.upperBound...].makeIterator()
+        while let character = characters.next() {
+            if character == "\\" {
+                guard let escaped = characters.next(), escaped == "." || escaped == "-" else {
+                    return nil
+                }
+                host.append(escaped)
+            } else if character == "/" || character == "$" {
+                break
+            } else if character.isLetter || character.isNumber || character == "." || character == "-" {
+                host.append(character)
+            } else {
+                return nil
+            }
+        }
+        // An unescaped dot means any character, but in a host it is almost
+        // always meant literally, so it is shown as written.
+        return host.contains(".") ? host.lowercased() : nil
     }
 
 }

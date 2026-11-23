@@ -74,9 +74,9 @@ extension UserDefaults {
         }
     }
 
-    // Only user state is stored: which catalog rules are on. The rules
-    // themselves live in code (AppLinkCatalog). Custom rules, if added later,
-    // belong under their own key.
+    // Which built-in rules are on, from before app-links.json existed. It is
+    // read only while that file does not exist, and the first write of the
+    // file carries it over (AppLinkConfigStore). Not written any more.
     var enabledAppLinkRuleIdentifiers: Set<String> {
         get {
             return Set(stringArray(forKey: Keys.enabledAppLinkRuleIdentifiers) ?? [])
