@@ -18,8 +18,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private var launchedToOpenURL = false
     private var statusItem: NSStatusItem?
-    private var settingsWindow: NSWindow?
+    private var settingsWindowController: SettingsWindowController?
     private var settingsModel: SettingsModel?
+
+    /// The process entry point. `app-links` commands are answered here and
+    /// exit before `NSApplicationMain` creates the app, this delegate, or
+    /// anything it owns. Any other launch, including macOS's own arguments
+    /// (`-psn_...`, `-NS...` defaults), goes straight to the normal launch.
+    static func main() {
+        if let status = AppLinksCommand.run(arguments: CommandLine.arguments) {
+            exit(status)
+        }
+        _ = NSApplicationMain(CommandLine.argc, CommandLine.unsafeArgv)
+    }
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         defaults.registerDefaultVales()
@@ -33,6 +44,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         applyActivationPolicy()
         setUpStatusItem()
+        browserManager.appLinkRouter.store.startWatching()
         _ = browserManager.isAccessibilityEnabled
         let relaunchedAfterUpdate = defaults.relaunchedAfterUpdate
         defaults.relaunchedAfterUpdate = false
@@ -120,29 +132,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // MARK: - Settings window
 
     private func showSettings() {
-        let window = settingsWindow ?? makeSettingsWindow()
-        settingsWindow = window
+        let controller = settingsWindowController ?? makeSettingsWindowController()
+        settingsWindowController = controller
         settingsModel?.refresh()
         NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(self)
+        controller.window?.makeKeyAndOrderFront(self)
     }
 
-    private func makeSettingsWindow() -> NSWindow {
+    private func makeSettingsWindowController() -> SettingsWindowController {
         let model = SettingsModel(browserManager: browserManager)
         model.onHideDockIconChange = { [weak self] in
             self?.applyActivationPolicy()
             // The policy switch can drop the app out of focus; bring the window back.
             NSApp.activate(ignoringOtherApps: true)
-            self?.settingsWindow?.makeKeyAndOrderFront(self)
+            self?.settingsWindowController?.window?.makeKeyAndOrderFront(self)
         }
         settingsModel = model
-
-        let window = NSWindow(contentViewController: NSHostingController(rootView: SettingsView(model: model, updater: updater)))
-        window.styleMask = [.titled, .closable, .miniaturizable]
-        window.title = "PerSpaceLinkRouter Settings"
-        window.isReleasedWhenClosed = false
-        window.center()
-        return window
+        return SettingsWindowController(model: model, updater: updater)
     }
 
     private func applyActivationPolicy() {

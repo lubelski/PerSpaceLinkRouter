@@ -33,9 +33,27 @@ class SettingsModel: ObservableObject {
     @Published private(set) var launchAtLogin = false
     @Published private(set) var activationDelay = 0
     @Published private(set) var appLinkRules: [AppLinkRuleDescription] = []
+    /// Why app-links.json is not in effect, if it isn't.
+    @Published private(set) var appLinkIssues: [AppLinkConfigIssue] = []
+    /// The last failed write of app-links.json from the window.
+    @Published var appLinkSaveError: String?
+
+    private var appLinkObserver: NSObjectProtocol?
 
     init(browserManager: BrowserManager) {
         self.browserManager = browserManager
+        appLinkObserver = NotificationCenter.default.addObserver(
+            forName: AppLinkConfigStore.didChangeNotification,
+            object: browserManager.appLinkRouter.store,
+            queue: .main) { [weak self] _ in
+                self?.refreshAppLinks()
+        }
+    }
+
+    deinit {
+        if let observer = appLinkObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     var targetBrowserName: String {
@@ -54,12 +72,18 @@ class SettingsModel: ObservableObject {
         hideDockIcon = defaults.hideDockIcon
         launchAtLogin = SMAppService.mainApp.status == .enabled
         activationDelay = Int(defaults.activationDelayInterval)
-        appLinkRules = browserManager.appLinkRouter.installedRuleDescriptions
+        refreshAppLinks()
     }
 
-    func setAppLinkRule(identifier: String, enabled: Bool) {
-        browserManager.appLinkRouter.setRule(identifier: identifier, enabled: enabled)
-        appLinkRules = browserManager.appLinkRouter.installedRuleDescriptions
+    /// App link actions are in AppLinksSettingsView.swift.
+    func refreshAppLinks() {
+        let router = browserManager.appLinkRouter
+        appLinkRules = router.ruleDescriptions
+        appLinkIssues = router.store.issues
+    }
+
+    var appLinkRouter: AppLinkRouter {
+        return browserManager.appLinkRouter
     }
 
     func setTargetBrowser(bundleIdentifier: String) {
@@ -137,10 +161,12 @@ class SettingsModel: ObservableObject {
 
 }
 
-struct SettingsView: View {
+// The Settings window's pages. The sidebar and the window around them are in
+// SettingsWindow.swift; the App Links page is in AppLinksSettingsView.swift.
+
+struct GeneralSettingsView: View {
 
     @ObservedObject var model: SettingsModel
-    @ObservedObject var updater: AppUpdater
 
     var body: some View {
         Form {
@@ -148,7 +174,7 @@ struct SettingsView: View {
                 Picker("Open links with", selection: browserSelection) {
                     ForEach(model.browsers, id: \.bundleIdentifier) { browser in
                         HStack {
-                            Image(nsImage: icon(for: browser))
+                            Image(nsImage: SettingsIcon.small(browser.image))
                             Text(browser.name)
                         }
                         .tag(browser.bundleIdentifier)
@@ -156,7 +182,7 @@ struct SettingsView: View {
                 }
                 LabeledContent("Default browser") {
                     if model.isDefaultBrowser {
-                        grantedLabel("PerSpaceLinkRouter")
+                        SettingsStatus.granted("PerSpaceLinkRouter")
                     } else {
                         Button("Set PerSpaceLinkRouter as Default…") {
                             model.setDefaultBrowser()
@@ -164,19 +190,12 @@ struct SettingsView: View {
                     }
                 }
             }
-            Section("Permissions") {
-                LabeledContent("Accessibility") {
-                    if model.isAccessibilityGranted {
-                        grantedLabel("Granted")
-                    } else {
-                        Button("Open System Settings…") {
-                            model.openAccessibilitySettings()
-                        }
-                    }
+            Section {
+                Stepper(value: activationDelay, in: 0...60, step: 5) {
+                    LabeledContent("Activation delay", value: "\(model.activationDelay) s")
                 }
-                LabeledContent("Automation") {
-                    automationStatusView
-                }
+            } footer: {
+                SettingsFooter("When links open within this many seconds of the last one, the browser window isn't brought forward again.")
             }
             Section {
                 Toggle("Hide Dock icon", isOn: Binding(
@@ -186,90 +205,8 @@ struct SettingsView: View {
                     get: { model.launchAtLogin },
                     set: { model.setLaunchAtLogin($0) }))
             }
-            Section {
-                Stepper(value: activationDelay, in: 0...60, step: 5) {
-                    LabeledContent("Activation delay", value: "\(model.activationDelay) s")
-                }
-            } footer: {
-                Text("When links open within this many seconds of the last one, the browser window isn't brought forward again.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Section {
-                if model.appLinkRules.isEmpty {
-                    statusText("No supported apps installed")
-                }
-                ForEach(model.appLinkRules, id: \.rule.id) { description in
-                    Toggle(isOn: appLinkRuleBinding(description.rule.id)) {
-                        HStack {
-                            Image(nsImage: icon(for: description.image))
-                            Text(description.rule.name)
-                        }
-                    }
-                }
-            } header: {
-                Text("App Links")
-            } footer: {
-                Text("Matching links open in the app instead of the browser. Hold ⌥ while opening a link to use the browser.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            if updater.isAvailable {
-                Section {
-                    Toggle("Install updates automatically", isOn: Binding(
-                        get: { updater.updatesAutomatically },
-                        set: { updater.updatesAutomatically = $0 }))
-                    LabeledContent("Version \(appVersion)") {
-                        Button("Check for Updates…") {
-                            updater.checkForUpdates()
-                        }
-                        .disabled(!updater.canCheck)
-                    }
-                }
-            }
         }
         .formStyle(.grouped)
-        .frame(width: 420)
-        .fixedSize()
-        .onAppear { model.refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            // Catches returning from System Settings after changing a grant.
-            model.refresh()
-        }
-    }
-
-    @ViewBuilder
-    private var automationStatusView: some View {
-        switch model.automationStatus {
-        case .granted:
-            grantedLabel("Granted")
-        case .denied:
-            Button("Open System Settings…") {
-                model.openAutomationSettings()
-            }
-        case .notDetermined:
-            statusText("Requested on first link")
-        case .unknown:
-            statusText("Checked while \(model.targetBrowserName) is running")
-        }
-    }
-
-    private func grantedLabel(_ title: String) -> some View {
-        Label {
-            Text(title)
-        } icon: {
-            Image(systemName: "checkmark.circle.fill")
-                .foregroundStyle(.green)
-        }
-    }
-
-    private func statusText(_ text: String) -> some View {
-        Text(text)
-            .foregroundStyle(.secondary)
-    }
-
-    private var appVersion: String {
-        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
 
     private var browserSelection: Binding<String> {
@@ -284,17 +221,132 @@ struct SettingsView: View {
             set: { model.setActivationDelay($0) })
     }
 
-    private func appLinkRuleBinding(_ identifier: String) -> Binding<Bool> {
-        Binding(
-            get: { model.appLinkRules.first { $0.rule.id == identifier }?.rule.isEnabled ?? false },
-            set: { model.setAppLinkRule(identifier: identifier, enabled: $0) })
+}
+
+struct PermissionsSettingsView: View {
+
+    @ObservedObject var model: SettingsModel
+
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent("Accessibility") {
+                    if model.isAccessibilityGranted {
+                        SettingsStatus.granted("Granted")
+                    } else {
+                        Button("Open System Settings…") {
+                            model.openAccessibilitySettings()
+                        }
+                    }
+                }
+            } footer: {
+                SettingsFooter("Used to find the browser's windows on the display under the pointer, so a link opens in a window in the current Space.")
+            }
+            Section {
+                LabeledContent("Automation") {
+                    automationStatusView
+                }
+            } footer: {
+                SettingsFooter("Used to tell \(model.targetBrowserName) to open a link in a new tab of that window, or in a new window on that display. macOS asks the first time a link opens.")
+            }
+        }
+        .formStyle(.grouped)
     }
 
-    private func icon(for browser: BrowserDescription) -> NSImage {
-        return icon(for: browser.image)
+    @ViewBuilder
+    private var automationStatusView: some View {
+        switch model.automationStatus {
+        case .granted:
+            SettingsStatus.granted("Granted")
+        case .denied:
+            Button("Open System Settings…") {
+                model.openAutomationSettings()
+            }
+        case .notDetermined:
+            SettingsStatus.text("Requested on first link")
+        case .unknown:
+            SettingsStatus.text("Checked while \(model.targetBrowserName) is running")
+        }
     }
 
-    private func icon(for image: NSImage) -> NSImage {
+}
+
+struct UpdatesSettingsView: View {
+
+    @ObservedObject var updater: AppUpdater
+
+    var body: some View {
+        Form {
+            if updater.isAvailable {
+                Section {
+                    Toggle("Install updates automatically", isOn: Binding(
+                        get: { updater.updatesAutomatically },
+                        set: { updater.updatesAutomatically = $0 }))
+                    LabeledContent("Version \(appVersion)") {
+                        Button("Check for Updates…") {
+                            updater.checkForUpdates()
+                        }
+                        .disabled(!updater.canCheck)
+                    }
+                }
+            } else {
+                Section {
+                    LabeledContent("Version", value: appVersion)
+                } footer: {
+                    SettingsFooter("This build has no update feed and doesn't update itself. Builds from the releases page do.")
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var appVersion: String {
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+
+}
+
+// MARK: - Shared pieces
+
+/// Help text under a section.
+struct SettingsFooter: View {
+
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+    }
+
+}
+
+enum SettingsStatus {
+
+    static func granted(_ title: String) -> some View {
+        Label {
+            Text(title)
+        } icon: {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+        }
+    }
+
+    static func text(_ text: String) -> some View {
+        Text(text)
+            .foregroundStyle(.secondary)
+    }
+
+}
+
+enum SettingsIcon {
+
+    /// An app icon at the size of a row's text.
+    static func small(_ image: NSImage) -> NSImage {
         let icon = image.copy() as! NSImage
         icon.size = NSSize(width: 16, height: 16)
         return icon

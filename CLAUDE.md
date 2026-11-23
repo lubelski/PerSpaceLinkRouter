@@ -8,21 +8,46 @@ Marc Schwieterman (GPL). `origin` is github.com/lubelski/PerSpaceLinkRouter and
 
 The app runs as a resident menu bar agent. `LSUIElement` is set in Info.plist,
 and the Dock icon is a runtime toggle via `NSApp.setActivationPolicy`. The
-settings window is built programmatically in AppDelegate; MainMenu.xib holds
-only the main menu. Launch at login uses `SMAppService`, which sets the
-deployment target floor at macOS 13.
+settings window is a SwiftUI sidebar and pages hosted in an AppKit window
+(`SettingsWindow.swift`, with the pages in `SettingsView.swift` and
+`AppLinksSettingsView.swift`, which also holds the rule edit sheet);
+MainMenu.xib holds only the main menu. Launch
+at login uses `SMAppService`, which sets the deployment target floor at
+macOS 13.
 
 ## App Link Rules
 
 - `BrowserManager.openURL` is the single entry point for links. It asks
   `AppLinkRouter` first; with no enabled rule matching, it falls through to
   the browser path unchanged.
-- The catalog lives in code (`AppLinkCatalog` in `AppLinkRule.swift`). Only
-  the set of enabled rule ids is stored in UserDefaults. Rule ids are
+- Built-in rules live in code (`AppLinkCatalog` in `AppLinkRule.swift`),
+  each with a one-line summary in `AppLinkCatalog.summaries`. Rule ids are
   persisted, so never rename one.
-- `AppLinkRule.swift` imports only Foundation so `bin/check-app-link-rules`
-  can compile it alone. Run that script after changing a pattern or rewrite,
-  and add cases for the change.
+- Custom rules, the match order, and the enabled set live in
+  `~/Library/Application Support/PerSpaceLinkRouter/app-links.json` (the app
+  is not sandboxed). `PERSPACELINKROUTER_APP_LINKS_FILE` overrides the
+  path; use it with a scratch file for any testing, never the real file.
+  Before the file exists the built-ins run with the old UserDefaults set
+  (`enabledAppLinkRuleIdentifiers`), which the first write migrates; the
+  window never writes UserDefaults any more.
+- `AppLinkConfig.swift` (parse, validate, order, write, `AppLinkMatcher`)
+  and `AppLinkConfigStore.swift` (load, save, watch) import only Foundation.
+  `AppLinkRouter.destination` and "Test a link" both go through
+  `AppLinkMatcher`, so keep matching logic there. A file that fails
+  validation keeps the last good rules, and the window refuses to write
+  while the file is invalid so it never overwrites hand edits.
+- The file format is documented in the README for agents. A change to the
+  schema needs a new `version`, a parser case, and README updates.
+- `bin/check-app-link-rules` checks the built-in patterns against sample
+  URLs. `bin/check-app-link-config` checks parsing, validation, ordering,
+  writing, matching, and the store (including reload when the file is
+  replaced) against temp files. Run both after touching any of it, and add
+  cases for the change.
+- `PerSpaceLinkRouter app-links list|test|check|path` is handled in
+  `AppDelegate.main()` by `AppLinksCommand` before `NSApplicationMain`, so
+  it starts no window, status item, or updater. Only `argv[1] == "app-links"`
+  takes that path. The commands only read. When the config file is absent,
+  `list` and `test` read the app's UserDefaults, so give them a scratch file.
 - Before adding a rule, check how the app's URL handler parses what it gets.
   Electron apps keep their handler in `Contents/Resources/app.asar` (or a
   downloaded module), which `strings` can search for `open-url`. Figma only
