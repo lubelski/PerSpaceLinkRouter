@@ -33,6 +33,8 @@ class SettingsModel: ObservableObject {
     @Published private(set) var launchAtLogin = false
     @Published private(set) var activationDelay = 0
     @Published private(set) var appLinkRules: [AppLinkRuleDescription] = []
+    /// Built-in rules that are not in the list.
+    @Published private(set) var appLinkGallery: [AppLinkRuleDescription] = []
     /// Why app-links.json is not in effect, if it isn't.
     @Published private(set) var appLinkIssues: [AppLinkConfigIssue] = []
     /// The last failed write of app-links.json from the window.
@@ -79,6 +81,7 @@ class SettingsModel: ObservableObject {
     func refreshAppLinks() {
         let router = browserManager.appLinkRouter
         appLinkRules = router.ruleDescriptions
+        appLinkGallery = router.galleryDescriptions
         appLinkIssues = router.store.issues
     }
 

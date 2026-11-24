@@ -103,8 +103,9 @@ struct AppLinkRule: Codable, Equatable, Identifiable {
 
 enum AppLinkCatalog {
 
-    /// Built-in rules, all disabled until the user turns them on. Order
-    /// matters: the first enabled, installed, matching rule wins.
+    /// Every built-in rule: the gallery the user adds rules from. A rule
+    /// takes effect only once its id is in the user's list. The ids in
+    /// `seededIdentifiers` come first, then the rest by name.
     static let rules: [AppLinkRule] = [
         // Figma's open-url handler only accepts URLs whose host is exactly
         // www.figma.com (it maps figma:// onto that origin too), so the
@@ -151,7 +152,110 @@ enum AppLinkCatalog {
             pattern: #"^https://open\.spotify\.com/(?:intl-[a-z]{2}(?:-[a-z]+)?/)?(track|album|artist|playlist|show|episode)/([a-z0-9]{22})(?:[/?#]|$)"#,
             rewriteTemplate: "spotify:$1:$2",
             isEnabled: false),
+
+        // The rest are gallery-only: not in a new list until added.
+        AppLinkRule(
+            id: "app-store",
+            name: "App Store",
+            bundleIdentifier: "com.apple.AppStore",
+            pattern: #"^https://(apps\.apple\.com/(?:[a-z]{2}/)?(?:app|app-bundle|developer|story)/[^#]+)"#,
+            rewriteTemplate: "macappstore://$1",
+            isEnabled: false),
+        AppLinkRule(
+            id: "apple-maps",
+            name: "Maps",
+            bundleIdentifier: "com.apple.Maps",
+            pattern: #"^https://maps\.apple\.com/"#,
+            rewriteTemplate: nil,
+            isEnabled: false),
+        AppLinkRule(
+            id: "apple-music",
+            name: "Music",
+            bundleIdentifier: "com.apple.Music",
+            pattern: #"^https://(music\.apple\.com/[a-z]{2}/(?:album|artist|playlist|song|station|music-video)/[^#]+)"#,
+            rewriteTemplate: "music://$1",
+            isEnabled: false),
+        AppLinkRule(
+            id: "apple-podcasts",
+            name: "Podcasts",
+            bundleIdentifier: "com.apple.podcasts",
+            pattern: #"^https://(podcasts\.apple\.com/(?:[a-z]{2}/)?podcast/[^#]+)"#,
+            rewriteTemplate: "podcasts://$1",
+            isEnabled: false),
+        // Claude's handler accepts claude://claude.ai/chat/<uuid> and
+        // /project/<uuid> with no query, and turns away chat ids whose
+        // fifteenth character is 8, so those stay in the browser.
+        AppLinkRule(
+            id: "claude",
+            name: "Claude",
+            bundleIdentifier: "com.anthropic.claudefordesktop",
+            pattern: #"^https://claude\.ai/((?:chat/(?!.{14}8)|project/)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/?$"#,
+            rewriteTemplate: "claude://claude.ai/$1",
+            isEnabled: false),
+        // Linear resolves linear://<path> against https://linear.app. Only
+        // workspace pages match, so the marketing site stays in the browser.
+        AppLinkRule(
+            id: "linear",
+            name: "Linear",
+            bundleIdentifier: "com.linear",
+            pattern: #"^https://linear\.app/((?!(?:docs|developers|changelog|blog|features|integrations)/)[^/?#]+/(?:issue|project|team|view|document|initiative|cycle)/.+)$"#,
+            rewriteTemplate: "linear://$1",
+            isEnabled: false),
+        // Meeting, chat, and channel deep links. Microsoft documents
+        // msteams:/l/... as the app form of teams.microsoft.com/l/...
+        AppLinkRule(
+            id: "microsoft-teams",
+            name: "Microsoft Teams",
+            bundleIdentifier: "com.microsoft.teams2",
+            pattern: #"^https://teams\.(?:microsoft|live)\.com/(l/(?:meetup-join|message|channel|chat|team|meeting|entity|call)/[^#]+)"#,
+            rewriteTemplate: "msteams:/$1",
+            isEnabled: false),
+        // Page links carry a 32-character id. Requiring one keeps the
+        // marketing and help pages in the browser.
+        AppLinkRule(
+            id: "notion",
+            name: "Notion",
+            bundleIdentifier: "notion.id",
+            pattern: #"^https://(?:www\.)?notion\.so/((?:[^?#]*[/-])?[0-9a-f]{32}(?:[?#].*)?)$"#,
+            rewriteTemplate: "notion://www.notion.so/$1",
+            isEnabled: false),
+        // steam://openurl/<url> opens the page in the Steam client. Sign-in
+        // pages on steamcommunity.com are left to the browser.
+        AppLinkRule(
+            id: "steam",
+            name: "Steam",
+            bundleIdentifier: "com.valvesoftware.steam",
+            pattern: #"^https://(store\.steampowered\.com/(?:app|sub|bundle)/\d+[^#]*|steamcommunity\.com/(?:sharedfiles|workshop)/[^#]+)"#,
+            rewriteTemplate: "steam://openurl/https://$1",
+            isEnabled: false),
+        // Public usernames and their posts. Reserved first path segments
+        // (invites, sticker sets, sharing) stay in the browser.
+        AppLinkRule(
+            id: "telegram",
+            name: "Telegram",
+            bundleIdentifier: "ru.keepcoder.Telegram",
+            pattern: #"^https://(?:t|telegram)\.me/(?!(?:joinchat|addstickers|addemoji|addtheme|addlist|share|proxy|socks|login|setlanguage|invoice|boost|giftcode|contact)(?:[/?#]|$))([a-z][a-z0-9_]{3,31})(?:/(\d+))?/?(?:[?#]|$)"#,
+            rewriteTemplate: "tg://resolve?domain=$1[&post=$2]",
+            isEnabled: false),
+        AppLinkRule(
+            id: "testflight",
+            name: "TestFlight",
+            bundleIdentifier: "com.apple.TestFlight",
+            pattern: #"^https://testflight\.apple\.com/(join/[a-z0-9]+)/?(?:[?#]|$)"#,
+            rewriteTemplate: "itms-beta://testflight.apple.com/$1",
+            isEnabled: false),
+        AppLinkRule(
+            id: "whatsapp",
+            name: "WhatsApp",
+            bundleIdentifier: "net.whatsapp.WhatsApp",
+            pattern: #"^https://wa\.me/(\d+)/?(?:\?(?:[^#]*&)?text=([^&#]+))?"#,
+            rewriteTemplate: "whatsapp://send?phone=$1[&text=$2]",
+            isEnabled: false),
     ]
+
+    /// The rules a new list starts with, in match order. They can be
+    /// removed like any other, and added back from the gallery.
+    static let seededIdentifiers = ["figma", "zoom", "slack", "discord", "spotify"]
 
     /// One line per built-in rule for the settings window, describing what
     /// its pattern matches.
@@ -161,18 +265,58 @@ enum AppLinkCatalog {
         "slack": "Channel and DM links from app.slack.com",
         "discord": "Channel and DM links from discord.com",
         "spotify": "Track, album, artist, playlist, show, and episode links",
+        "app-store": "App, developer, and story pages from apps.apple.com",
+        "apple-maps": "Place, search, and directions links from maps.apple.com",
+        "apple-music": "Album, artist, playlist, song, and station links",
+        "apple-podcasts": "Show and episode links from podcasts.apple.com",
+        "claude": "Chat and project links from claude.ai",
+        "linear": "Issue, project, team, view, and document links",
+        "microsoft-teams": "Meeting, chat, and channel links",
+        "notion": "Page and database links from notion.so",
+        "steam": "Store pages and Workshop items",
+        "telegram": "Profile, channel, and post links from t.me",
+        "testflight": "Beta invitation links",
+        "whatsapp": "Chat links from wa.me",
     ]
 
     static let identifiers: Set<String> = Set(rules.map(\.id))
 
-    static func isBuiltIn(_ identifier: String) -> Bool {
-        return identifiers.contains(identifier)
+    private static let rulesByIdentifier: [String: AppLinkRule] =
+        Dictionary(rules.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+    static func rule(identifier: String) -> AppLinkRule? {
+        return rulesByIdentifier[identifier]
+    }
+
+    /// The seeded rules, in match order.
+    static var seededRules: [AppLinkRule] {
+        return seededIdentifiers.compactMap(rule(identifier:))
+    }
+
+    /// Whether `rule` is the gallery's own rule. A custom rule may use a
+    /// gallery id, which happens when a release adds a gallery rule under an
+    /// id someone already took. That rule stays custom and takes the
+    /// gallery rule's place.
+    static func isBuiltIn(_ rule: AppLinkRule) -> Bool {
+        guard var builtIn = rulesByIdentifier[rule.id] else {
+            return false
+        }
+        builtIn.isEnabled = rule.isEnabled
+        return builtIn == rule
+    }
+
+    /// Gallery rules not in `rules`, the user's list, sorted by name.
+    static func galleryRules(notIn rules: [AppLinkRule]) -> [AppLinkRule] {
+        let listed = Set(rules.map(\.id))
+        return self.rules
+            .filter { !listed.contains($0.id) }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     /// A one-line description of what a rule matches: the built-in summary,
     /// or for a custom rule the host its pattern names, or else the pattern.
     static func summary(for rule: AppLinkRule) -> String {
-        if isBuiltIn(rule.id), let summary = summaries[rule.id] {
+        if isBuiltIn(rule), let summary = summaries[rule.id] {
             return summary
         }
         if let host = host(inPattern: rule.pattern) {

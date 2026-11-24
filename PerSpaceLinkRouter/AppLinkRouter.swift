@@ -39,7 +39,7 @@ class AppLinkRouter {
         self.store = store
     }
 
-    /// Every rule in match order, built-in and custom, with `isEnabled` set.
+    /// The rules in use in match order, built-in and custom, with `isEnabled` set.
     var rules: [AppLinkRule] {
         return store.rules
     }
@@ -58,8 +58,15 @@ class AppLinkRouter {
         return rules.map(Self.describe)
     }
 
+    /// Built-in rules that are not in the list, for the gallery. Rules whose
+    /// app is installed come first.
+    var galleryDescriptions: [AppLinkRuleDescription] {
+        let descriptions = AppLinkCatalog.galleryRules(notIn: rules).map(Self.describe)
+        return descriptions.filter(\.isInstalled) + descriptions.filter { !$0.isInstalled }
+    }
+
     static func describe(_ rule: AppLinkRule) -> AppLinkRuleDescription {
-        let isBuiltIn = AppLinkCatalog.isBuiltIn(rule.id)
+        let isBuiltIn = AppLinkCatalog.isBuiltIn(rule)
         let summary = AppLinkCatalog.summary(for: rule)
         if let applicationURL = applicationURL(for: rule),
            let values = try? applicationURL.resourceValues(forKeys: [.effectiveIconKey, .nameKey]),
