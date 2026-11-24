@@ -22,6 +22,7 @@
 		49C0FFEE2E50000100000002 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C0FFEE2E50000100000001 /* SettingsView.swift */; };
 		49C0FFEE2E50000100000004 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C0FFEE2E50000100000003 /* SettingsWindow.swift */; };
 		49C0FFEE2E50000100000006 /* AppLinksSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C0FFEE2E50000100000005 /* AppLinksSettingsView.swift */; };
+		49C0FFEE2E50000100000016 /* AppLinkGalleryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C0FFEE2E50000100000015 /* AppLinkGalleryView.swift */; };
 		49A11C1E2E60000100000004 /* AppLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000003 /* AppLinkRouter.swift */; };
 		49A11C1E2E60000100000002 /* AppLinkRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000001 /* AppLinkRule.swift */; };
 		49A11C1E2E60000100000006 /* AppLinkConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49A11C1E2E60000100000005 /* AppLinkConfig.swift */; };
@@ -56,6 +57,7 @@
 		49C0FFEE2E50000100000001 /* SettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		49C0FFEE2E50000100000003 /* SettingsWindow.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
 		49C0FFEE2E50000100000005 /* AppLinksSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinksSettingsView.swift; sourceTree = "<group>"; };
+		49C0FFEE2E50000100000015 /* AppLinkGalleryView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkGalleryView.swift; sourceTree = "<group>"; };
 		49A11C1E2E60000100000003 /* AppLinkRouter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkRouter.swift; sourceTree = "<group>"; };
 		49A11C1E2E60000100000001 /* AppLinkRule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkRule.swift; sourceTree = "<group>"; };
 		49A11C1E2E60000100000005 /* AppLinkConfig.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppLinkConfig.swift; sourceTree = "<group>"; };
@@ -103,6 +105,7 @@
 				49C0FFEE2E50000100000001 /* SettingsView.swift */,
 				49C0FFEE2E50000100000003 /* SettingsWindow.swift */,
 				49C0FFEE2E50000100000005 /* AppLinksSettingsView.swift */,
+				49C0FFEE2E50000100000015 /* AppLinkGalleryView.swift */,
 				49A0E0012F00000100000001 /* AppUpdater.swift */,
 				49A11C1E2E60000100000003 /* AppLinkRouter.swift */,
 				49A11C1E2E60000100000001 /* AppLinkRule.swift */,
@@ -268,6 +271,7 @@
 				49C0FFEE2E50000100000002 /* SettingsView.swift in Sources */,
 				49C0FFEE2E50000100000004 /* SettingsWindow.swift in Sources */,
 				49C0FFEE2E50000100000006 /* AppLinksSettingsView.swift in Sources */,
+				49C0FFEE2E50000100000016 /* AppLinkGalleryView.swift in Sources */,
 				49A0E0012F00000100000002 /* AppUpdater.swift in Sources */,
 				49A11C1E2E60000100000004 /* AppLinkRouter.swift in Sources */,
 				49A11C1E2E60000100000002 /* AppLinkRule.swift in Sources */,

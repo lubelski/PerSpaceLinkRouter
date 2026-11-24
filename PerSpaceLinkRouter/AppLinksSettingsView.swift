@@ -2,8 +2,9 @@
 //  AppLinksSettingsView.swift
 //  PerSpaceLinkRouter
 //
-//  The App Links page: every rule in match order, custom rules, the edit
-//  sheet, and "Test a link". Nothing here opens or logs a tested link.
+//  The App Links page: the rules in use in match order, adding from the
+//  gallery, custom rules, the edit sheet, and "Test a link". Nothing here
+//  opens or logs a tested link.
 //
 
 import AppKit
@@ -65,20 +66,34 @@ extension SettingsModel {
             if let original = draft.originalIdentifier, let index = rules.firstIndex(where: { $0.id == original }) {
                 rules[index] = draft.rule(identifier: original, isEnabled: rules[index].isEnabled)
             } else {
+                // A new custom rule stays clear of gallery ids, so it never
+                // takes a gallery rule's place by accident.
                 identifier = AppLinkConfig.uniqueIdentifier(base: AppLinkConfig.slug(from: draft.name),
-                                                            taken: Set(rules.map(\.id)))
+                                                            taken: Set(rules.map(\.id)).union(AppLinkCatalog.identifiers))
                 rules.insert(draft.rule(identifier: identifier, isEnabled: true), at: 0)
             }
         }
         return identifier
     }
 
-    func removeCustomAppLinkRule(identifier: String) {
-        guard !AppLinkCatalog.isBuiltIn(identifier) else {
-            return
-        }
+    /// Takes a rule out of the list. A custom rule is deleted. A built-in
+    /// rule goes back to the gallery.
+    func removeAppLinkRule(identifier: String) {
         updateAppLinkRules { rules in
             rules.removeAll { $0.id == identifier }
+        }
+    }
+
+    /// Adds a gallery rule to the end of the list, turned on. The rules
+    /// don't overlap, so its place only matters against custom rules.
+    func addGalleryAppLinkRule(identifier: String) {
+        updateAppLinkRules { rules in
+            guard !rules.contains(where: { $0.id == identifier }),
+                  var rule = AppLinkCatalog.rule(identifier: identifier) else {
+                return
+            }
+            rule.isEnabled = true
+            rules.append(rule)
         }
     }
 
@@ -91,7 +106,8 @@ extension SettingsModel {
                 return
             }
             let original = rules[index]
-            let newIdentifier = AppLinkConfig.uniqueIdentifier(base: "\(original.id)-copy", taken: Set(rules.map(\.id)))
+            let newIdentifier = AppLinkConfig.uniqueIdentifier(base: "\(original.id)-copy",
+                                                               taken: Set(rules.map(\.id)).union(AppLinkCatalog.identifiers))
             let copy = AppLinkRule(id: newIdentifier, name: "\(original.name) copy",
                                    bundleIdentifier: original.bundleIdentifier, pattern: original.pattern,
                                    rewriteTemplate: original.rewriteTemplate, isEnabled: false)
@@ -134,6 +150,7 @@ struct AppLinksSettingsView: View {
     @State private var selection: String?
     @State private var draft: AppLinkRuleDraft?
     @State private var pendingRemoval: AppLinkRuleDescription?
+    @State private var isShowingGallery = false
     @State private var testLink = ""
 
     var body: some View {
@@ -168,11 +185,13 @@ struct AppLinksSettingsView: View {
             presenting: pendingRemoval
         ) { description in
             Button("Remove", role: .destructive) {
-                model.removeCustomAppLinkRule(identifier: description.rule.id)
+                model.removeAppLinkRule(identifier: description.rule.id)
                 selection = nil
             }
-        } message: { _ in
-            Text("The rule is deleted from \(model.appLinksFileURL.lastPathComponent).")
+        } message: { description in
+            Text(description.isBuiltIn
+                 ? "You can add it again from the gallery."
+                 : "The rule is deleted from \(model.appLinksFileURL.lastPathComponent).")
         }
     }
 
@@ -198,6 +217,17 @@ struct AppLinksSettingsView: View {
         }
         .listStyle(.bordered(alternatesRowBackgrounds: false))
         .frame(minHeight: 150)
+        .overlay {
+            if model.appLinkRules.isEmpty {
+                Text("No rules. Add one with +.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .sheet(isPresented: $isShowingGallery) {
+            AppLinkGalleryView(rules: model.appLinkGallery,
+                               onAdd: { model.addGalleryAppLinkRule(identifier: $0) },
+                               onDone: { isShowingGallery = false })
+        }
     }
 
     @ViewBuilder
@@ -208,7 +238,7 @@ struct AppLinksSettingsView: View {
             .disabled(!model.appLinksAreEditable)
         Divider()
         Button("Remove…") { pendingRemoval = description }
-            .disabled(description.isBuiltIn || !model.appLinksAreEditable)
+            .disabled(!model.appLinksAreEditable)
     }
 
     private func ruleBinding(_ identifier: String) -> Binding<Bool> {
@@ -225,25 +255,29 @@ struct AppLinksSettingsView: View {
 
     private var buttons: some View {
         HStack(spacing: 8) {
-            ControlGroup {
-                Button {
-                    draft = AppLinkRuleDraft()
-                } label: {
-                    Image(systemName: "plus")
-                        .accessibilityLabel("Add Rule")
-                }
-                .help("Add a custom rule")
-                Button {
-                    pendingRemoval = selected
-                } label: {
-                    Image(systemName: "minus")
-                        .accessibilityLabel("Remove Rule")
-                }
-                .help("Remove the selected custom rule")
-                .disabled(selectedIsBuiltIn)
+            Menu {
+                Button("Add from Gallery…") { isShowingGallery = true }
+                Button("New Custom Rule…") { draft = AppLinkRuleDraft() }
+            } label: {
+                Image(systemName: "plus")
+                    .accessibilityLabel("Add Rule")
             }
+            .menuStyle(.borderedButton)
+            .menuIndicator(.hidden)
             .fixedSize()
+            .help("Add a rule from the gallery, or write a custom one")
             .disabled(!model.appLinksAreEditable)
+
+            Button {
+                pendingRemoval = selected
+            } label: {
+                // Sized so the button is as tall as the ones beside it.
+                Image(systemName: "minus")
+                    .frame(width: 14, height: 16)
+                    .accessibilityLabel("Remove Rule")
+            }
+            .help("Remove the selected rule")
+            .disabled(selected == nil || !model.appLinksAreEditable)
 
             Button("Edit…") {
                 if let selected = selected { edit(selected) }

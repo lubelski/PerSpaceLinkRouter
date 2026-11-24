@@ -66,15 +66,17 @@ let builtInOrder = ["figma", "zoom", "slack", "discord", "spotify"]
 
 let example = #"""
 {
-  "version": 1,
-  "order": ["my-rule", "slack", "figma", "zoom", "discord", "spotify"],
-  "enabled": ["my-rule", "slack"],
+  "version": 2,
+  "order": ["my-rule", "slack", "figma", "linear"],
+  "enabled": ["my-rule", "slack", "linear"],
   "rules": [
     { "id": "my-rule", "name": "Example", "bundleIdentifier": "com.example.app",
       "pattern": "^https://example\\.com/(.+)$", "rewrite": "example://$1" }
   ]
 }
 """#
+
+let validRuleFields = #""name": "Example", "bundleIdentifier": "com.example.app", "pattern": "^https://example\\.com/(.+)$""#
 
 func rule(_ id: String, pattern: String = #"^https://example\.com/(.+)$"#, rewrite: String? = "example://$1",
           bundle: String = "com.example.app", enabled: Bool = false) -> AppLinkRule {
@@ -85,23 +87,39 @@ func rule(_ id: String, pattern: String = #"^https://example\.com/(.+)$"#, rewri
 // MARK: - Catalog
 
 section("catalog")
-expect(ids(AppLinkCatalog.rules) == builtInOrder, "catalog order")
+expect(AppLinkCatalog.seededIdentifiers == builtInOrder, "seeded rules")
+expect(Array(ids(AppLinkCatalog.rules).prefix(builtInOrder.count)) == builtInOrder, "the catalog starts with the seeded rules")
+expect(ids(AppLinkCatalog.seededRules) == builtInOrder, "every seeded id is in the catalog")
+expect(AppLinkCatalog.rules.count > builtInOrder.count, "the gallery has more than the seeded rules")
+expect(Set(ids(AppLinkCatalog.rules)).count == AppLinkCatalog.rules.count, "catalog ids are unique")
 for builtIn in AppLinkCatalog.rules {
     expect(AppLinkConfig.isValidIdentifier(builtIn.id), "built-in id \(builtIn.id) is a valid id")
     expect(AppLinkCatalog.summaries[builtIn.id] != nil, "built-in \(builtIn.id) has a summary")
     expect(AppLinkRuleValidator.issues(for: builtIn).isEmpty, "built-in \(builtIn.id) passes rule validation",
            "\(AppLinkRuleValidator.issues(for: builtIn))")
-    expect(AppLinkCatalog.isBuiltIn(builtIn.id), "isBuiltIn(\(builtIn.id))")
+    expect(AppLinkCatalog.isBuiltIn(builtIn), "isBuiltIn(\(builtIn.id))")
+    var enabledBuiltIn = builtIn
+    enabledBuiltIn.isEnabled = true
+    expect(AppLinkCatalog.isBuiltIn(enabledBuiltIn), "isBuiltIn(\(builtIn.id)) when on")
 }
-expect(!AppLinkCatalog.isBuiltIn("my-rule"), "custom id is not built-in")
+expect(!AppLinkCatalog.isBuiltIn(rule("my-rule")), "custom id is not built-in")
+expect(!AppLinkCatalog.isBuiltIn(rule("notion")), "a custom rule with a gallery id is not built-in")
+
+// The gallery is the catalog minus the list, by name.
+let galleryForSeeded = AppLinkCatalog.galleryRules(notIn: AppLinkCatalog.seededRules)
+expect(Set(ids(galleryForSeeded)) == AppLinkCatalog.identifiers.subtracting(builtInOrder), "gallery leaves out the rules in the list")
+expect(galleryForSeeded.map(\.name) == galleryForSeeded.map(\.name).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending },
+       "gallery is sorted by name")
+expect(Set(ids(AppLinkCatalog.galleryRules(notIn: []))) == AppLinkCatalog.identifiers, "an empty list puts every rule in the gallery")
+expect(!ids(AppLinkCatalog.galleryRules(notIn: [rule("notion")])).contains("notion"), "a custom rule with a gallery id hides that gallery rule")
 
 // MARK: - Parsing the example
 
 section("parsing")
 if let config = expectValid(example, "the documented example") {
     let rules = config.resolvedRules()
-    expect(ids(rules) == ["my-rule", "slack", "figma", "zoom", "discord", "spotify"], "example order", "\(ids(rules))")
-    expect(enabledIDs(rules) == ["my-rule", "slack"], "example enabled", "\(enabledIDs(rules))")
+    expect(ids(rules) == ["my-rule", "slack", "figma", "linear"], "example order", "\(ids(rules))")
+    expect(enabledIDs(rules) == ["my-rule", "slack", "linear"], "example enabled", "\(enabledIDs(rules))")
     expect(config.customRules.count == 1, "example has one custom rule")
     let custom = config.customRules[0]
     expect(custom.pattern == #"^https://example\.com/(.+)$"#, "JSON escapes decode in pattern", custom.pattern)
@@ -111,6 +129,8 @@ if let config = expectValid(example, "the documented example") {
 }
 
 _ = expectValid(#"{"version": 1}"#, "only a version")
+_ = expectValid(#"{"version": 2}"#, "only a version, 2")
+_ = expectValid(#"{"version": 2.0, "order": ["figma"], "enabled": [], "rules": []}"#, "version 2.0")
 _ = expectValid(#"{"version": 1.0, "order": [], "enabled": [], "rules": []}"#, "version 1.0 and empty arrays")
 _ = expectValid(#"{"version": 1, "order": null, "enabled": null, "rules": null}"#, "null arrays")
 
@@ -131,24 +151,61 @@ section("ordering")
 func resolved(order: [String], enabled: [String] = [], custom: [AppLinkRule] = []) -> [AppLinkRule] {
     return AppLinkConfig(order: order, enabled: enabled, customRules: custom).resolvedRules()
 }
-expect(ids(resolved(order: [])) == builtInOrder, "empty order is catalog order")
-expect(ids(resolved(order: ["spotify", "zoom"])) == ["spotify", "zoom", "figma", "slack", "discord"],
-       "built-ins missing from order go at the end in catalog order", "\(ids(resolved(order: ["spotify", "zoom"])))")
-expect(ids(resolved(order: ["nope", "zoom", "also-nope"])) == ["zoom", "figma", "slack", "discord", "spotify"],
-       "unknown ids in order are ignored")
-expect(ids(resolved(order: ["zoom", "figma", "zoom"])) == ["zoom", "figma", "slack", "discord", "spotify"],
-       "a repeated id counts at its first place")
-expect(enabledIDs(resolved(order: [], enabled: ["ghost", "zoom"])) == ["zoom"], "unknown ids in enabled are ignored")
-expect(ids(resolved(order: ["slack"], custom: [rule("b"), rule("a")])) == ["slack", "b", "a", "figma", "zoom", "discord", "spotify"],
-       "custom rules missing from order follow in file order, before missing built-ins",
+expect(ids(resolved(order: [])).isEmpty, "an empty order is an empty list")
+expect(ids(resolved(order: ["spotify", "zoom"])) == ["spotify", "zoom"],
+       "built-ins missing from order are not in use", "\(ids(resolved(order: ["spotify", "zoom"])))")
+expect(ids(resolved(order: ["zoom", "notion"])) == ["zoom", "notion"], "a gallery rule named in order is in use")
+expect(ids(resolved(order: ["nope", "zoom", "also-nope"])) == ["zoom"], "unknown ids in order are ignored")
+expect(ids(resolved(order: ["zoom", "figma", "zoom"])) == ["zoom", "figma"], "a repeated id counts at its first place")
+expect(enabledIDs(resolved(order: ["zoom"], enabled: ["ghost", "zoom"])) == ["zoom"], "unknown ids in enabled are ignored")
+expect(enabledIDs(resolved(order: ["zoom"], enabled: ["zoom", "slack"])) == ["zoom"], "enabling a rule that is not in order does nothing")
+expect(ids(resolved(order: ["slack"], custom: [rule("b"), rule("a")])) == ["slack", "b", "a"],
+       "custom rules missing from order follow in file order",
        "\(ids(resolved(order: ["slack"], custom: [rule("b"), rule("a")])))")
+
+// A custom rule may take a gallery rule's id, and then replaces it.
+let shadow = resolved(order: ["notion", "zoom"], enabled: ["notion"], custom: [rule("notion")])
+expect(shadow.first?.bundleIdentifier == "com.example.app" && shadow.first?.isEnabled == true, "a custom rule with a gallery id replaces the gallery rule")
+let shadowConfig = AppLinkConfig(rules: shadow)
+expect(ids(shadowConfig.customRules) == ["notion"], "the replacing custom rule is written back as custom")
+expect(AppLinkConfig(rules: resolved(order: ["notion", "zoom"])).customRules.isEmpty, "gallery rules are not written as custom rules")
+
+// Version 1 kept the five rules of its day in use whatever order said.
+func resolvedV1(_ body: String) -> [AppLinkRule] {
+    return (try? AppLinkConfigParser.parse(data(#"{"version": 1, \#(body)}"#)))?.resolvedRules() ?? []
+}
+expect(ids(resolvedV1(#""order": []"#)) == builtInOrder, "version 1: an empty order is the five seeded rules")
+expect(ids(resolvedV1(#""order": ["spotify", "zoom"], "enabled": ["zoom"]"#)) == ["spotify", "zoom", "figma", "slack", "discord"],
+       "version 1: seeded rules missing from order go at the end")
+expect(enabledIDs(resolvedV1(#""order": ["spotify", "zoom"], "enabled": ["zoom"]"#)) == ["zoom"], "version 1: enabled carries over")
+expect(ids(resolvedV1(#""order": ["slack"], "rules": [{"id": "b", \#(validRuleFields)}, {"id": "a", \#(validRuleFields)}]"#))
+        == ["slack", "b", "a", "figma", "zoom", "discord", "spotify"],
+       "version 1: custom rules missing from order come before the missing seeded rules")
+expect(!ids(resolvedV1(#""order": []"#)).contains("notion"), "version 1: gallery rules added later are not put in use")
+let upgraded = try! AppLinkConfigParser.parse(data(#"{"version": 1, "order": ["zoom"], "enabled": ["zoom"]}"#))
+let upgradedText = String(decoding: AppLinkConfigSerializer.data(for: upgraded), as: UTF8.self)
+expect(upgradedText.contains("\"version\": 2") && upgradedText.contains(#""order": ["zoom", "figma", "slack", "discord", "spotify"]"#),
+       "a version 1 file is written back as version 2 with its full list", upgradedText)
+expect(ids(resolved(order: ["zoom"])) == ["zoom"] && (try? AppLinkConfigParser.parse(data(#"{"version": 2, "order": ["zoom"]}"#)))?.order == ["zoom"],
+       "version 2: order is the whole list")
+
+// Removing a seeded rule and adding a gallery rule both survive a write.
+var listed = AppLinkConfig.fallback(enabledIdentifiers: ["slack"]).resolvedRules()
+listed.removeAll { $0.id == "figma" }
+var added = AppLinkCatalog.rule(identifier: "linear")!
+added.isEnabled = true
+listed.append(added)
+let relisted = try! AppLinkConfigParser.parse(AppLinkConfigSerializer.data(for: AppLinkConfig(rules: listed))).resolvedRules()
+expect(ids(relisted) == ["zoom", "slack", "discord", "spotify", "linear"], "a removed seeded rule stays removed, an added gallery rule stays", "\(ids(relisted))")
+expect(enabledIDs(relisted) == ["slack", "linear"], "and the enabled set is kept")
+expect(ids(AppLinkCatalog.galleryRules(notIn: relisted)).contains("figma"), "a removed seeded rule is back in the gallery")
 expect(ids(resolved(order: ["a", "zoom", "b"], custom: [rule("b"), rule("a")])).prefix(3) == ["a", "zoom", "b"],
        "custom and built-in rules interleave as ordered")
 let resolvedEnabled = resolved(order: [], enabled: ["a"], custom: [rule("a", enabled: false), rule("b", enabled: true)])
 expect(enabledIDs(resolvedEnabled) == ["a"], "enabled list, not the rule's own flag, decides", "\(enabledIDs(resolvedEnabled))")
 
 let fallback = AppLinkConfig.fallback(enabledIdentifiers: ["slack", "ghost"])
-expect(fallback.order == builtInOrder, "fallback order is the catalog")
+expect(fallback.order == builtInOrder, "fallback order is the seeded rules")
 expect(fallback.enabled == ["slack"], "fallback carries the UserDefaults set, minus unknown ids")
 expect(fallback.customRules.isEmpty, "fallback has no custom rules")
 expect(enabledIDs(AppLinkConfig.fallback(enabledIdentifiers: []).resolvedRules()).isEmpty, "fallback with nothing on")
@@ -178,9 +235,10 @@ let (_, syntaxIssues) = parse("{\n  \"version\": 1\n  \"order\": []\n}")
 expect(syntaxIssues.first?.message.contains("line") == true, "JSON syntax errors say where", "\(syntaxIssues)")
 expectIssue("[]", "top-level array", containing: "top level must be an object")
 expectIssue("{}", "missing version", field: "version", containing: "missing")
-expectIssue(#"{"version": 2}"#, "unknown version", field: "version", containing: "not a known version")
-expectIssue(#"{"version": "1"}"#, "version as a string", field: "version", containing: "must be the number 1")
-expectIssue(#"{"version": true}"#, "version as a boolean", field: "version", containing: "must be the number 1")
+expectIssue(#"{"version": 3}"#, "unknown version", field: "version", containing: "not a known version")
+expectIssue(#"{"version": 1.5}"#, "version between the known ones", field: "version", containing: "not a known version")
+expectIssue(#"{"version": "1"}"#, "version as a string", field: "version", containing: "must be the number 2")
+expectIssue(#"{"version": true}"#, "version as a boolean", field: "version", containing: "must be the number 2")
 expectIssue(#"{"version": 1, "rule": []}"#, "unknown top-level key", field: "rule", containing: "unknown key")
 expectIssue(#"{"version": 1, "order": "slack"}"#, "order not an array", field: "order", containing: "must be an array")
 expectIssue(#"{"version": 1, "enabled": ["slack", 3]}"#, "enabled with a number", field: "enabled[1]", containing: "rule id string")
@@ -194,7 +252,7 @@ expectIssue(withRule(#""id": "My-Rule", \#(validRule)"#), "uppercase id", ruleId
 expectIssue(withRule(#""id": "my rule", \#(validRule)"#), "id with a space", field: "id", containing: "lowercase letters")
 expectIssue(withRule(#""id": "my_rule", \#(validRule)"#), "id with an underscore", field: "id", containing: "lowercase letters")
 expectIssue(withRule(#""id": "-rule", \#(validRule)"#), "id starting with a hyphen", field: "id", containing: "must not start with a hyphen")
-expectIssue(withRule(#""id": "slack", \#(validRule)"#), "id of a built-in rule", ruleIdentifier: "slack", field: "id", containing: "built-in")
+_ = expectValid(withRule(#""id": "slack", \#(validRule)"#), "a custom rule may use a built-in rule's id")
 expectIssue(#"{"version": 1, "rules": [{"id": "dup", \#(validRule)}, {"id": "dup", \#(validRule)}]}"#,
             "duplicate id", ruleIndex: 1, ruleIdentifier: "dup", field: "id", containing: "must be unique")
 expectIssue(withRule(#""id": "a", "bundleIdentifier": "b", "pattern": "x""#), "missing name", field: "name", containing: "missing")
@@ -238,8 +296,8 @@ expect(AppLinkConfig.isValidIdentifier(AppLinkConfig.slug(from: "Ünïcode ☃ n
 expect(AppLinkConfig.uniqueIdentifier(base: "a", taken: []) == "a", "unique id when free")
 expect(AppLinkConfig.uniqueIdentifier(base: "a", taken: ["a", "a-2"]) == "a-3", "unique id counts up")
 expect(AppLinkConfig.uniqueIdentifier(base: "figma-copy", taken: Set(builtInOrder)) == "figma-copy", "copy id")
-expect(AppLinkConfigParser.identifierProblems("slack", builtInIdentifiers: AppLinkCatalog.identifiers, taken: []).count == 1,
-       "built-in id is a problem")
+expect(AppLinkConfigParser.identifierProblems("slack", taken: []).isEmpty, "a built-in id is allowed in the file")
+expect(AppLinkConfigParser.identifierProblems("slack", taken: ["slack"]).count == 1, "a repeated id is a problem")
 
 expect(AppLinkCatalog.host(inPattern: #"^https://example\.com/(.+)$"#) == "example.com", "host from a simple pattern")
 expect(AppLinkCatalog.host(inPattern: #"^https://linear\.app/([^/]+)"#) == "linear.app", "host followed by a path")
@@ -257,9 +315,9 @@ section("writing")
 let written = String(decoding: AppLinkConfigSerializer.data(for: try! AppLinkConfigParser.parse(data(example))), as: UTF8.self)
 let expectedText = #"""
 {
-  "version": 1,
-  "order": ["my-rule", "slack", "figma", "zoom", "discord", "spotify"],
-  "enabled": ["my-rule", "slack"],
+  "version": 2,
+  "order": ["my-rule", "slack", "figma", "linear"],
+  "enabled": ["my-rule", "slack", "linear"],
   "rules": [
     {
       "id": "my-rule",
@@ -274,7 +332,7 @@ let expectedText = #"""
 """#
 expect(written == expectedText, "the example writes in the documented layout", "got:\n\(written)")
 let emptyText = String(decoding: AppLinkConfigSerializer.data(for: AppLinkConfig(order: [], enabled: [], customRules: [])), as: UTF8.self)
-expect(emptyText == "{\n  \"version\": 1,\n  \"order\": [],\n  \"enabled\": [],\n  \"rules\": []\n}\n", "empty config layout", emptyText)
+expect(emptyText == "{\n  \"version\": 2,\n  \"order\": [],\n  \"enabled\": [],\n  \"rules\": []\n}\n", "empty config layout", emptyText)
 
 let tricky = AppLinkConfig(
     order: ["q", "slack"], enabled: ["q"],
@@ -481,23 +539,23 @@ handle.closeFile()
 waitForChange("written in place") { enabledIDs(store.rules) == ["discord"] }
 
 // Data.write(options: .atomic), which is what the app itself uses.
-try! configText(order: ["zoom"], enabled: ["zoom", "slack"]).write(to: configURL, options: .atomic)
+try! configText(order: ["zoom", "slack"], enabled: ["zoom", "slack"]).write(to: configURL, options: .atomic)
 waitForChange("atomic write") { enabledIDs(store.rules) == ["zoom", "slack"] }
 
 // A second in-place write after the replacement, so the re-armed watch works.
-try! configText(order: [], enabled: ["figma"]).write(to: configURL)
+try! configText(order: ["figma"], enabled: ["figma"]).write(to: configURL)
 waitForChange("written again after replacement") { enabledIDs(store.rules) == ["figma"] }
 
 // A broken save, then a fix.
 try! Data("{ \"version\": 1, ".utf8).write(to: configURL)
 waitForChange("broken file reports issues") { !store.issues.isEmpty && enabledIDs(store.rules) == ["figma"] }
-try! configText(order: [], enabled: ["slack"]).write(to: configURL)
+try! configText(order: ["slack"], enabled: ["slack"]).write(to: configURL)
 waitForChange("fixed file clears issues") { store.issues.isEmpty && enabledIDs(store.rules) == ["slack"] }
 
 // Removed, then created again.
 try! FileManager.default.removeItem(at: configURL)
 waitForChange("deleted") { !store.isUsingFile }
-try! configText(order: [], enabled: ["spotify"]).write(to: configURL)
+try! configText(order: ["spotify"], enabled: ["spotify"]).write(to: configURL)
 waitForChange("created again") { store.isUsingFile && enabledIDs(store.rules) == ["spotify"] }
 
 onQueue { store.stopWatching() }

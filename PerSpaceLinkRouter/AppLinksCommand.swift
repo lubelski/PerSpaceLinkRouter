@@ -17,8 +17,11 @@ enum AppLinksCommand {
     static let usage = """
         Usage: PerSpaceLinkRouter app-links <command>
 
-          list          Every rule in match order: on/off, id, name, built-in or
-                        custom, and whether its app is installed.
+          list          Every rule in use, in match order: on/off, id, name,
+                        built-in or custom, and whether its app is installed.
+          gallery       The built-in rules that are not in use: id, name, and
+                        whether its app is installed. Add one by putting its
+                        id in "order" and "enabled".
           test <url>    Which rule catches the link and the URL the app receives,
                         or that it goes to the browser. Opens nothing.
           check         Validates the config file. Exits 1 and lists the errors
@@ -42,6 +45,8 @@ enum AppLinksCommand {
         switch rest.first {
         case "list" where rest.count == 1:
             return list(fileURL: fileURL)
+        case "gallery" where rest.count == 1:
+            return gallery(fileURL: fileURL)
         case "test" where rest.count == 2:
             return test(rest[1], fileURL: fileURL)
         case "check" where rest.count == 1:
@@ -63,7 +68,7 @@ enum AppLinksCommand {
     private static func check(fileURL: URL) -> Int32 {
         switch AppLinkConfigFile.read(fileURL) {
         case .missing:
-            print("\(fileURL.lastPathComponent): no file; the built-in rules are in use")
+            print("\(fileURL.lastPathComponent): no file; the starting rules are in use")
             return 0
         case .unreadable(let message):
             printError("\(fileURL.lastPathComponent): can't be read: \(message)")
@@ -97,8 +102,19 @@ enum AppLinksCommand {
             [rule.isEnabled ? "on" : "off",
              rule.id,
              rule.name,
-             AppLinkCatalog.isBuiltIn(rule.id) ? "built-in" : "custom",
+             AppLinkCatalog.isBuiltIn(rule) ? "built-in" : "custom",
              AppLinkRouter.isInstalled(rule) ? "installed" : "not installed"]
+        }
+        printTable(rows)
+        return 0
+    }
+
+    private static func gallery(fileURL: URL) -> Int32 {
+        guard let rules = loadRules(fileURL: fileURL) else {
+            return 1
+        }
+        let rows = AppLinkCatalog.galleryRules(notIn: rules).map { rule -> [String] in
+            [rule.id, rule.name, AppLinkRouter.isInstalled(rule) ? "installed" : "not installed"]
         }
         printTable(rows)
         return 0

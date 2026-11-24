@@ -83,9 +83,9 @@ default browser by selecting it in `System Settings` > `Desktop & Dock` >
 ## App Links
 
 `PerSpaceLinkRouter` can open some links in their native app instead of the
-browser. The `App Links` page of `Settings…` lists every rule in match order;
-the first enabled rule that matches a link wins. All of the built-in rules
-are off by default:
+browser. The `App Links` page of `Settings…` lists your rules in match order;
+the first enabled rule that matches a link wins. The list starts with five
+rules, all off:
 
 * Figma: design, FigJam board, slides, prototype, and Make links
 * Zoom: meeting links (`zoom.us/j/…`, including company subdomains)
@@ -93,16 +93,36 @@ are off by default:
 * Discord: channel and DM links (`discord.com/channels/…`)
 * Spotify: track, album, artist, playlist, show, and episode links
 
+The gallery has more ready-made rules to add:
+
+* App Store: app, developer, and story pages (`apps.apple.com`)
+* Claude: chat and project links (`claude.ai`)
+* Linear: issue, project, team, view, and document links
+* Maps: `maps.apple.com` links
+* Microsoft Teams: meeting, chat, and channel links
+* Music: album, artist, playlist, song, and station links
+* Notion: page and database links (`notion.so`)
+* Podcasts: show and episode links (`podcasts.apple.com`)
+* Steam: store pages and Workshop items
+* Telegram: profile, channel, and post links (`t.me`)
+* TestFlight: beta invitation links
+* WhatsApp: chat links (`wa.me`)
+
 On the page you can:
 
 * Turn each rule on or off, and drag rules to change the match order. A rule
   whose app isn't installed is grayed out and can't be turned on.
-* Add a custom rule with `+`: pick the app, give a name, a link pattern (a
-  regular expression matched against the whole link, case-insensitively),
-  and optionally what to send the app instead (`$1` to `$9` insert the parts
-  the pattern captured; leave it empty to pass the link through unchanged).
-* `Edit…` or remove (`−`) a custom rule. Built-in rules can't be edited;
-  `Duplicate` makes an editable custom copy of any rule.
+* Add a rule with `+`. `Add from Gallery…` lists the ready-made rules that
+  aren't in your list; one you add goes to the end of the list, turned on.
+  `New Custom Rule…` makes your own: pick the app, give a name, a link
+  pattern (a regular expression matched against the whole link,
+  case-insensitively), and optionally what to send the app instead (`$1` to
+  `$9` insert the parts the pattern captured; leave it empty to pass the
+  link through unchanged).
+* Remove any rule with `−`, including the five the list starts with. A
+  removed ready-made rule goes back to the gallery.
+* `Edit…` a custom rule. Ready-made rules can't be edited; `Duplicate` makes
+  an editable custom copy of any rule.
 * `Test a link`: paste a link to see which rule catches it and the URL the
   app would receive, or that it goes to the browser. Nothing is opened.
 * `Open Config File` opens the rules as a JSON file (see below).
@@ -127,7 +147,7 @@ edit alike:
 The app is not sandboxed, so this is the Application Support folder in your
 home folder. The file is created the first time you change something on the
 `App Links` page or click `Open Config File`; until then the app uses the
-built-in rules and the toggles you set in earlier versions. Once it exists,
+five starting rules and the toggles you set in earlier versions. Once it exists,
 the file is the source of truth. The app watches it and picks up every saved
 change without a restart. If a saved file has an error, the app keeps using
 the last good rules and the `App Links` page shows what is wrong.
@@ -146,9 +166,9 @@ The schema:
 
 ```json
 {
-  "version": 1,
-  "order": ["my-rule", "slack", "figma", "zoom", "discord", "spotify"],
-  "enabled": ["my-rule", "slack"],
+  "version": 2,
+  "order": ["my-rule", "slack", "figma", "linear"],
+  "enabled": ["my-rule", "slack", "linear"],
   "rules": [
     {
       "id": "my-rule",
@@ -161,12 +181,15 @@ The schema:
 }
 ```
 
-* `version`: always `1`.
-* `rules`: custom rules only. The built-in rules (`figma`, `zoom`, `slack`,
-  `discord`, `spotify`) live in the app and can't be changed here; copy one
-  under a new id instead.
-  * `id`: lowercase letters, digits, and hyphens; unique, and not a built-in
-    id. Other keys refer to the rule by it.
+* `version`: write `2`. The app still reads version `1` files, in which the
+  five starting rules (`figma`, `zoom`, `slack`, `discord`, `spotify`) were
+  in use whether or not `order` named them, and saves them as version `2`.
+* `rules`: custom rules only. The built-in rules live in the app and can't
+  be changed here; copy one under a new id instead. `app-links gallery`
+  prints the built-in rules that are not in use.
+  * `id`: lowercase letters, digits, and hyphens; unique among the custom
+    rules. Other keys refer to the rule by it. Pick an id no built-in rule
+    has: a custom rule with a built-in rule's id replaces that rule.
   * `name`: shown in the Settings window.
   * `bundleIdentifier`: the app that opens the link, such as
     `com.example.app`. `osascript -e 'id of app "AppName"'` prints an
@@ -178,10 +201,12 @@ The schema:
     groups, and `$0` the whole match. A `[...]` part is dropped when a group
     it uses is empty. `\` escapes `$`, `[`, `]`, and `\`. Leave the key out,
     or set it to `null` or `""`, to pass the link through unchanged.
-* `order`: rule ids in match order, built-in and custom. The first enabled
-  rule that matches wins. Ids not listed go at the end, so a built-in rule
-  added by a later release appears there. Unknown ids are ignored.
-* `enabled`: the ids of the rules that are on. Unknown ids are ignored.
+* `order`: the rules in use, as ids in match order, built-in and custom. The
+  first enabled rule that matches wins. A built-in rule left out is not in
+  use: to add one, put its id here and in `enabled`; to remove one, take it
+  out of both. Custom rules left out go at the end. Unknown ids are ignored.
+* `enabled`: the ids of the rules that are on. Unknown ids, and ids that
+  are not in use, are ignored.
 
 The app reloads the file as soon as it is saved. After editing, run `check`;
 it exits non-zero and lists each error (which rule, which field) when the
@@ -195,13 +220,16 @@ The other commands:
 
 ```
 PerSpaceLinkRouter app-links list
+PerSpaceLinkRouter app-links gallery
 PerSpaceLinkRouter app-links test "https://example.com/some/link"
 PerSpaceLinkRouter app-links check
 PerSpaceLinkRouter app-links path
 ```
 
-* `list`: one line per rule, in match order: on or off, id, name, built-in
-  or custom, and whether the app is installed.
+* `list`: one line per rule in use, in match order: on or off, id, name,
+  built-in or custom, and whether the app is installed.
+* `gallery`: one line per built-in rule that is not in use: id, name, and
+  whether the app is installed.
 * `test <url>`: the id of the rule that catches the link and the URL the app
   would receive (`my-rule → example://some/link`), or `browser`. When a rule
   matches but is off or its app is missing, a `note:` line says so. Exits 0
@@ -210,7 +238,7 @@ PerSpaceLinkRouter app-links path
   and 1 with the errors when it isn't.
 * `path`: prints the config file's path.
 
-`list` and `test` exit 1 when the file is invalid; fix it first. Usage errors
+`list`, `gallery`, and `test` exit 1 when the file is invalid; fix it first. Usage errors
 exit 2. The commands only read: they never write the file or start the app's
 window, menu bar icon, or updater, and they work while the app is running.
 Set `PERSPACELINKROUTER_APP_LINKS_FILE` to a path to use a different config

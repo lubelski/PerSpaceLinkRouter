@@ -10,12 +10,18 @@
 
 import Foundation
 
-/// What app-links.json holds: the custom rules, the match order of every
-/// rule, and which rules are on. Built-in rules stay in code
+/// What app-links.json holds: the custom rules, the list of rules in use in
+/// match order, and which of them are on. Built-in rules stay in code
 /// (`AppLinkCatalog`); the file names them only in `order` and `enabled`.
+/// A built-in rule that `order` leaves out is not in use. It waits in the
+/// gallery.
 struct AppLinkConfig: Equatable {
 
-    static let currentVersion = 1
+    /// Version 1 put every built-in rule in use whether `order` named it
+    /// or not. Version 2 added the gallery: only the rules in `order` are
+    /// in use. The parser reads both and the app writes 2.
+    static let currentVersion = 2
+    static let readableVersions = [1, 2]
 
     /// Rule ids in match order. May name ids that no longer exist.
     var order: [String]
@@ -25,21 +31,19 @@ struct AppLinkConfig: Equatable {
     /// is the only record of which rules are on.
     var customRules: [AppLinkRule]
 
-    /// The config used before app-links.json exists: the built-in rules in
-    /// catalog order, with the enabled set kept in UserDefaults by earlier
-    /// versions.
-    static func fallback(enabledIdentifiers: Set<String>, builtIns: [AppLinkRule] = AppLinkCatalog.rules) -> AppLinkConfig {
-        let order = builtIns.map(\.id)
+    /// The config used before app-links.json exists: the seeded rules, with
+    /// the enabled set kept in UserDefaults by earlier versions.
+    static func fallback(enabledIdentifiers: Set<String>, seeded: [String] = AppLinkCatalog.seededIdentifiers) -> AppLinkConfig {
+        let order = seeded
         return AppLinkConfig(order: order, enabled: order.filter { enabledIdentifiers.contains($0) }, customRules: [])
     }
 
     /// The config that describes a list of rules in match order, as the
     /// settings window holds them.
-    init(rules: [AppLinkRule], builtIns: [AppLinkRule] = AppLinkCatalog.rules) {
-        let builtInIdentifiers = Set(builtIns.map(\.id))
+    init(rules: [AppLinkRule]) {
         order = rules.map(\.id)
         enabled = rules.filter(\.isEnabled).map(\.id)
-        customRules = rules.filter { !builtInIdentifiers.contains($0.id) }.map { rule in
+        customRules = rules.filter { !AppLinkCatalog.isBuiltIn($0) }.map { rule in
             var rule = rule
             rule.isEnabled = false
             return rule
@@ -52,19 +56,19 @@ struct AppLinkConfig: Equatable {
         self.customRules = customRules
     }
 
-    /// Every rule, built-in and custom, in match order with `isEnabled` set.
+    /// The rules in use, built-in and custom, in match order with
+    /// `isEnabled` set.
     ///
     /// Ids in `order` come first. Unknown ids are skipped, and a repeated id
     /// counts only at its first place. Custom rules missing from `order`
-    /// follow in file order, then built-in rules missing from it in catalog
-    /// order, so a built-in rule added by a later release shows up at the
-    /// end.
+    /// follow in file order. Built-in rules missing from it are left out.
+    /// A custom rule with a built-in rule's id takes its place.
     func resolvedRules(builtIns: [AppLinkRule] = AppLinkCatalog.rules) -> [AppLinkRule] {
         var byIdentifier: [String: AppLinkRule] = [:]
         for rule in builtIns {
             byIdentifier[rule.id] = rule
         }
-        for rule in customRules where byIdentifier[rule.id] == nil {
+        for rule in customRules.reversed() {
             byIdentifier[rule.id] = rule
         }
         let enabledSet = Set(enabled)
@@ -80,7 +84,6 @@ struct AppLinkConfig: Equatable {
         }
         order.forEach(place)
         customRules.map(\.id).forEach(place)
-        builtIns.map(\.id).forEach(place)
         return result
     }
 
@@ -183,7 +186,7 @@ enum AppLinkConfigParser {
 
     /// Parses and validates app-links.json. Throws `AppLinkConfigError` with
     /// every issue found, not just the first.
-    static func parse(_ data: Data, builtIns: [AppLinkRule] = AppLinkCatalog.rules) throws -> AppLinkConfig {
+    static func parse(_ data: Data) throws -> AppLinkConfig {
         let object: Any
         do {
             object = try JSONSerialization.jsonObject(with: data, options: [])
@@ -202,18 +205,21 @@ enum AppLinkConfigParser {
             issues.append(AppLinkConfigIssue(field: key, "unknown key; expected version, order, enabled, and rules"))
         }
 
+        var version = AppLinkConfig.currentVersion
         switch root["version"] {
         case nil:
             issues.append(AppLinkConfigIssue(field: "version", "missing; set it to \(AppLinkConfig.currentVersion)"))
-        case let number as NSNumber where !isBoolean(number) && number.doubleValue == Double(AppLinkConfig.currentVersion):
-            break
         case let number as NSNumber where !isBoolean(number):
-            issues.append(AppLinkConfigIssue(field: "version", "\(number) is not a known version; this app reads version \(AppLinkConfig.currentVersion)"))
+            if let known = AppLinkConfig.readableVersions.first(where: { Double($0) == number.doubleValue }) {
+                version = known
+            } else {
+                issues.append(AppLinkConfigIssue(field: "version", "\(number) is not a known version; this app writes version \(AppLinkConfig.currentVersion)"))
+            }
         default:
             issues.append(AppLinkConfigIssue(field: "version", "must be the number \(AppLinkConfig.currentVersion)"))
         }
 
-        let order = stringArray(root["order"], field: "order", issues: &issues)
+        var order = stringArray(root["order"], field: "order", issues: &issues)
         let enabled = stringArray(root["enabled"], field: "enabled", issues: &issues)
 
         var customRules: [AppLinkRule] = []
@@ -221,14 +227,13 @@ enum AppLinkConfigParser {
         case nil, is NSNull:
             break
         case let array as [Any]:
-            let builtInIdentifiers = Set(builtIns.map(\.id))
             var seen = Set<String>()
             for (index, element) in array.enumerated() {
                 guard let dictionary = element as? [String: Any] else {
                     issues.append(AppLinkConfigIssue(ruleIndex: index, "must be an object"))
                     continue
                 }
-                if let rule = parseRule(dictionary, index: index, builtInIdentifiers: builtInIdentifiers, seen: &seen, issues: &issues) {
+                if let rule = parseRule(dictionary, index: index, seen: &seen, issues: &issues) {
                     customRules.append(rule)
                 }
             }
@@ -239,10 +244,18 @@ enum AppLinkConfigParser {
         if !issues.isEmpty {
             throw AppLinkConfigError(issues: issues)
         }
+        if version == 1 {
+            // Version 1 ran the five rules of its day whether `order` named
+            // them or not, after everything else. Naming them keeps a list
+            // written by that version as it was.
+            let custom = customRules.map(\.id).filter { !order.contains($0) }
+            let seeded = AppLinkCatalog.seededIdentifiers.filter { !order.contains($0) }
+            order += custom + seeded
+        }
         return AppLinkConfig(order: order, enabled: enabled, customRules: customRules)
     }
 
-    private static func parseRule(_ dictionary: [String: Any], index: Int, builtInIdentifiers: Set<String>, seen: inout Set<String>, issues: inout [AppLinkConfigIssue]) -> AppLinkRule? {
+    private static func parseRule(_ dictionary: [String: Any], index: Int, seen: inout Set<String>, issues: inout [AppLinkConfigIssue]) -> AppLinkRule? {
         let readableIdentifier = dictionary["id"] as? String
         let issueCount = issues.count
         func issue(_ field: String?, _ message: String) {
@@ -281,7 +294,7 @@ enum AppLinkConfigParser {
         }
 
         if let identifier = identifier {
-            for message in identifierProblems(identifier, builtInIdentifiers: builtInIdentifiers, taken: seen) {
+            for message in identifierProblems(identifier, taken: seen) {
                 issue("id", message)
             }
             seen.insert(identifier)
@@ -298,8 +311,9 @@ enum AppLinkConfigParser {
         return nil
     }
 
-    /// Why `identifier` cannot name a new custom rule, if it can't.
-    static func identifierProblems(_ identifier: String, builtInIdentifiers: Set<String>, taken: Set<String>) -> [String] {
+    /// Why `identifier` cannot name a custom rule in the file, if it can't.
+    /// A built-in rule's id is allowed: that rule replaces the built-in one.
+    static func identifierProblems(_ identifier: String, taken: Set<String>) -> [String] {
         if identifier.isEmpty {
             return ["must not be empty"]
         }
@@ -307,9 +321,7 @@ enum AppLinkConfigParser {
         if !AppLinkConfig.isValidIdentifier(identifier) {
             problems.append("\"\(identifier)\" may only use lowercase letters, digits, and hyphens, and must not start with a hyphen")
         }
-        if builtInIdentifiers.contains(identifier) {
-            problems.append("\"\(identifier)\" is a built-in rule's id; pick another")
-        } else if taken.contains(identifier) {
+        if taken.contains(identifier) {
             problems.append("\"\(identifier)\" is used by an earlier rule; ids must be unique")
         }
         return problems

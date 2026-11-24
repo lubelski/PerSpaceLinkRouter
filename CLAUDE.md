@@ -23,7 +23,18 @@ macOS 13.
 - Built-in rules live in code (`AppLinkCatalog` in `AppLinkRule.swift`),
   each with a one-line summary in `AppLinkCatalog.summaries`. Rule ids are
   persisted, so never rename one.
-- Custom rules, the match order, and the enabled set live in
+- The catalog is the gallery. A built-in rule is in use only when the
+  config's `order` names it; the rest wait in the gallery sheet
+  (`AppLinkGalleryView.swift`). `AppLinkCatalog.seededIdentifiers` is the
+  list a new install starts with, and every one of them can be removed. To
+  add a gallery rule, add it to `rules` and `summaries`, give it cases in
+  `bin/check-app-link-rules.swift`, and list it in the README. Don't add it
+  to `seededIdentifiers`.
+- A custom rule may carry a built-in rule's id, which happens when a release
+  adds a gallery rule under an id a user already took. The custom rule
+  wins, so tell the two apart with `AppLinkCatalog.isBuiltIn(rule)`, which
+  compares content, never by id alone.
+- Custom rules, the rules in use in match order, and the enabled set live in
   `~/Library/Application Support/PerSpaceLinkRouter/app-links.json` (the app
   is not sandboxed). `PERSPACELINKROUTER_APP_LINKS_FILE` overrides the
   path; use it with a scratch file for any testing, never the real file.
@@ -37,13 +48,15 @@ macOS 13.
   validation keeps the last good rules, and the window refuses to write
   while the file is invalid so it never overwrites hand edits.
 - The file format is documented in the README for agents. A change to the
-  schema needs a new `version`, a parser case, and README updates.
+  schema needs a new `version`, a parser case, and README updates. The
+  file is at version 2; version 1, where the five seeded rules were in use
+  whatever `order` said, is still read and is written back as 2.
 - `bin/check-app-link-rules` checks the built-in patterns against sample
   URLs. `bin/check-app-link-config` checks parsing, validation, ordering,
   writing, matching, and the store (including reload when the file is
   replaced) against temp files. Run both after touching any of it, and add
   cases for the change.
-- `PerSpaceLinkRouter app-links list|test|check|path` is handled in
+- `PerSpaceLinkRouter app-links list|gallery|test|check|path` is handled in
   `AppDelegate.main()` by `AppLinksCommand` before `NSApplicationMain`, so
   it starts no window, status item, or updater. Only `argv[1] == "app-links"`
   takes that path. The commands only read. When the config file is absent,
